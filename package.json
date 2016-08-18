@@ -1,0 +1,28 @@
+{
+  "name": "waterpipe",
+  "version": "1.0.0",
+  "description": "JavaScript template engine",
+  "main": "src/waterpipe.js",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "mocha": "^3.0.2"
+  },
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/misonou/waterpipe.git"
+  },
+  "keywords": [
+    "template",
+    "data"
+  ],
+  "author": "misonou",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/misonou/waterpipe/issues"
+  },
+  "homepage": "https://github.com/misonou/waterpipe#readme"
+}
