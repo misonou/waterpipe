@@ -39,7 +39,7 @@
 
     waterpipe.pipes[':json'] = JSON.stringify;
     waterpipe.pipes[':query'] = function (obj) {
-        var arr = buildParams([], obj);
+        var arr = internals.buildParams([], obj);
         return arr.join("&").replace(/%20/g, "+");
     };
     waterpipe.pipes[':date'] = function (obj, format) {
