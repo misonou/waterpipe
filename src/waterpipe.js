@@ -26,7 +26,15 @@
  * THE SOFTWARE.
  */
 
-(function ($, String, Math, Array, document, undefined) {
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define([], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory();
+    } else {
+        root.waterpipe = factory();
+    }
+} (this, function () {
     'use strict';
 
     var OP_EVAL = 1;
@@ -60,9 +68,6 @@
     var evalCount = 0;
     var pipes = Object.create ? Object.create(null) : {};
     var cache = {};
-    var node = document.createTextNode('');
-    var elm = document.createElement('span');
-    elm.appendChild(node);
 
     function typeValue(str) {
         if (CONSTANTS.hasOwnProperty(str)) {
@@ -113,12 +118,81 @@
     }
 
     function escape(str) {
-        node.nodeValue = str;
-        return elm.innerHTML;
+        var re = /["'&<>]/;
+        if (!re.exec(str)) {
+            return str;
+        }
+        var html = '';
+        var index = 0;
+        var lastIndex = 0;
+        for (index = re.lastIndex; index < str.length; index++) {
+            var escape;
+            switch (str.charCodeAt(index)) {
+                case 34: // "
+                    escape = '&quot;';
+                    break;
+                case 38: // &
+                    escape = '&amp;';
+                    break;
+                case 39: // '
+                    escape = '&#39;';
+                    break;
+                case 60: // <
+                    escape = '&lt;';
+                    break;
+                case 62: // >
+                    escape = '&gt;';
+                    break;
+                default:
+                    continue;
+            }
+            if (lastIndex !== index) {
+                html += str.substring(lastIndex, index);
+            }
+            lastIndex = index + 1;
+            html += escape;
+        }
+        return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
     }
 
-    function each(value, callback) {
-        return typeof value === 'object' && $.each(value, callback);
+    function each(obj, callback) {
+        var i, len;
+        if (obj && 'length' in obj) {
+            for (i = 0, len = obj.length; i < len; i++) {
+                callback(i, obj[i]);
+            }
+        } else if (obj && typeof obj === 'object') {
+            var arr = Object.getOwnPropertyNames(obj);
+            for (i = 0, len = arr.length; i < len; i++) {
+                callback(arr[i], obj[arr[i]]);
+            }
+        }
+    }
+
+    function flatten(src) {
+        var dst = [];
+        for (var i = 0, len = src.length; i < len; i++) {
+            if (Array.isArray(src[i])) {
+                for (var j = 0, src2 = src[i], len2 = src2.length; j < len2; j++) {
+                    if (src2[j] !== undefined && src2[j] !== null) {
+                        dst[dst.length] = src2[j];
+                    }
+                }
+            } else if (src[i] !== undefined && src[i] !== null) {
+                dst[dst.length] = src[i];
+            }
+        }
+        return dst;
+    }
+
+    function extend() {
+        var args = slice.apply(null, arguments);
+        for (var i = 1, len = args.length; i < len; i++) {
+            for (var prop in args[i]) {
+                args[0][prop] = args[i][prop];
+            }
+        }
+        return args[0];
     }
 
     function where(arr, filter, map) {
@@ -162,9 +236,9 @@
     }
 
     function inherit(base, values) {
-        function Anonymous() {}
+        function Anonymous() { }
         Anonymous.prototype = base;
-        return $.extend(new Anonymous(), values);
+        return extend(new Anonymous(), values);
     }
 
     function formatCallSite(str, start, end, cstart, cend) {
@@ -216,7 +290,7 @@
                     }
                 }
             }
-            this.length = $.noop;
+            this.length = function () { };
         };
 
         function assert(result) {
@@ -283,66 +357,66 @@
                 lastIndex = r.lastIndex;
 
                 switch (m[0].charAt(0)) {
-                case '<':
-                    if (m[1]) {
-                        if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
-                            current.opened = false;
+                    case '<':
+                        if (m[1]) {
+                            if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
+                                current.opened = false;
+                            }
+                        } else {
+                            endTextContent();
+                            htmlStack.unshift({
+                                op: HTMLOP_ELEMENT_START,
+                                tagName: m[2],
+                                offsets: [],
+                                attrs: {}
+                            });
+                            tokens.push(htmlStack[0]);
                         }
-                    } else {
-                        endTextContent();
-                        htmlStack.unshift({
-                            op: HTMLOP_ELEMENT_START,
-                            tagName: m[2],
-                            offsets: [],
-                            attrs: {}
-                        });
-                        tokens.push(htmlStack[0]);
-                    }
-                    break;
-                case '>':
-                case '/':
-                    if (assert(m[0], current && current.tagName)) {
-                        if (current.opened === false || m[0] === '/>') {
+                        break;
+                    case '>':
+                    case '/':
+                        if (assert(m[0], current && current.tagName)) {
+                            if (current.opened === false || m[0] === '/>') {
+                                endTextContent();
+                                tokens.push({
+                                    op: HTMLOP_ELEMENT_END
+                                });
+                                htmlStack.shift();
+                                startTextContent();
+                            } else if (m[0] === '>') {
+                                current.opened = true;
+                                startTextContent();
+                            }
+                        }
+                        break;
+                    case '"':
+                        if (assert(m[0], current && current.attrName)) {
                             endTextContent();
                             tokens.push({
-                                op: HTMLOP_ELEMENT_END
+                                op: HTMLOP_ATTR_END,
+                                attrName: current.attrName
                             });
                             htmlStack.shift();
-                            startTextContent();
-                        } else if (m[0] === '>') {
-                            current.opened = true;
-                            startTextContent();
                         }
-                    }
-                    break;
-                case '"':
-                    if (assert(m[0], current && current.attrName)) {
-                        endTextContent();
-                        tokens.push({
-                            op: HTMLOP_ATTR_END,
-                            attrName: current.attrName
-                        });
-                        htmlStack.shift();
-                    }
-                    break;
-                default:
-                    if (assert(m[0], current)) {
-                        if (m[0].indexOf('=') < 0) {
-                            tokens.push({
-                                op: HTMLOP_ATTR_END,
-                                attrName: m[3]
-                            });
-                        } else {
-                            htmlStack.unshift({
-                                op: HTMLOP_ATTR_START,
-                                attrName: m[3],
-                                offsets: []
-                            });
-                            current.attrs[m[3]] = htmlStack[0];
-                            tokens.push(htmlStack[0]);
-                            startTextContent();
+                        break;
+                    default:
+                        if (assert(m[0], current)) {
+                            if (m[0].indexOf('=') < 0) {
+                                tokens.push({
+                                    op: HTMLOP_ATTR_END,
+                                    attrName: m[3]
+                                });
+                            } else {
+                                htmlStack.unshift({
+                                    op: HTMLOP_ATTR_START,
+                                    attrName: m[3],
+                                    offsets: []
+                                });
+                                current.attrs[m[3]] = htmlStack[0];
+                                tokens.push(htmlStack[0]);
+                                startTextContent();
+                            }
                         }
-                    }
                 }
             }
             if (lastIndex !== str.length) {
@@ -359,74 +433,74 @@
             lastIndex = r.lastIndex;
 
             switch (m[1]) {
-            case '!':
-                break;
-            case '/':
-                assert(controlStack[0] && m[2] === controlStack[0].tokenName);
-                controlStack[0].token.index = tokens.length;
-                if (m[2] === TOKEN_FOREACH) {
-                    tokens.push({
-                        op: OP_ITER_END,
-                        index: controlStack[0].tokenIndex + 1
+                case '!':
+                    break;
+                case '/':
+                    assert(controlStack[0] && m[2] === controlStack[0].tokenName);
+                    controlStack[0].token.index = tokens.length;
+                    if (m[2] === TOKEN_FOREACH) {
+                        tokens.push({
+                            op: OP_ITER_END,
+                            index: controlStack[0].tokenIndex + 1
+                        });
+                    }
+                    controlStack.shift();
+                    break;
+                case TOKEN_IF:
+                case TOKEN_IFNOT:
+                    controlStack.unshift({
+                        tokenIndex: tokens.length,
+                        tokenName: TOKEN_IF,
+                        token: {
+                            op: OP_TEST,
+                            condition: parsePipe(m[2]),
+                            negate: m[1] === TOKEN_IFNOT
+                        }
                     });
-                }
-                controlStack.shift();
-                break;
-            case TOKEN_IF:
-            case TOKEN_IFNOT:
-                controlStack.unshift({
-                    tokenIndex: tokens.length,
-                    tokenName: TOKEN_IF,
-                    token: {
-                        op: OP_TEST,
-                        condition: parsePipe(m[2]),
-                        negate: m[1] === TOKEN_IFNOT
+                    tokens.push(controlStack[0].token);
+                    break;
+                case TOKEN_ELSE:
+                case TOKEN_ELSEIF:
+                case TOKEN_ELSEIFNOT:
+                    assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
+                    var previousControl = controlStack.splice(0, 1, {
+                        tokenIndex: tokens.length,
+                        tokenName: TOKEN_IF,
+                        token: {
+                            op: OP_JUMP
+                        }
+                    })[0];
+                    (previousControl.tokenIf || previousControl.token).index = tokens.length + 1;
+                    if (previousControl.token.op === OP_JUMP) {
+                        controlStack[0].token = previousControl.token;
                     }
-                });
-                tokens.push(controlStack[0].token);
-                break;
-            case TOKEN_ELSE:
-            case TOKEN_ELSEIF:
-            case TOKEN_ELSEIFNOT:
-                assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
-                var previousControl = controlStack.splice(0, 1, {
-                    tokenIndex: tokens.length,
-                    tokenName: TOKEN_IF,
-                    token: {
-                        op: OP_JUMP
+                    tokens.push(controlStack[0].token);
+                    if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
+                        controlStack[0].tokenIf = {
+                            op: OP_TEST,
+                            condition: parsePipe(m[2]),
+                            negate: m[1] === TOKEN_ELSEIFNOT
+                        };
+                        tokens.push(controlStack[0].tokenIf);
                     }
-                })[0];
-                (previousControl.tokenIf || previousControl.token).index = tokens.length + 1;
-                if (previousControl.token.op === OP_JUMP) {
-                    controlStack[0].token = previousControl.token;
-                }
-                tokens.push(controlStack[0].token);
-                if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
-                    controlStack[0].tokenIf = {
-                        op: OP_TEST,
-                        condition: parsePipe(m[2]),
-                        negate: m[1] === TOKEN_ELSEIFNOT
-                    };
-                    tokens.push(controlStack[0].tokenIf);
-                }
-                break;
-            case TOKEN_FOREACH:
-                controlStack.unshift({
-                    tokenIndex: tokens.length,
-                    tokenName: TOKEN_FOREACH,
-                    token: {
-                        op: OP_ITER,
-                        expression: parsePipe(m[2])
-                    }
-                });
-                tokens.push(controlStack[0].token);
-                break;
-            default:
-                tokens.push({
-                    op: OP_EVAL,
-                    expression: parsePipe(m[2]),
-                    noescape: m[1] === '&'
-                });
+                    break;
+                case TOKEN_FOREACH:
+                    controlStack.unshift({
+                        tokenIndex: tokens.length,
+                        tokenName: TOKEN_FOREACH,
+                        token: {
+                            op: OP_ITER,
+                            expression: parsePipe(m[2])
+                        }
+                    });
+                    tokens.push(controlStack[0].token);
+                    break;
+                default:
+                    tokens.push({
+                        op: OP_EVAL,
+                        expression: parsePipe(m[2]),
+                        noescape: m[1] === '&'
+                    });
             }
         }
         if (lastIndex !== str.length) {
@@ -438,7 +512,7 @@
 
     function evaluate(tokens, options) {
         var output = [];
-        var htmlStack = [document.createDocumentFragment()];
+        var htmlStack = options.html || options.htmlPartial ? [document.createDocumentFragment()] : [];
         var objStack = options.objStack || [];
         var iteratorStack = options.iteratorStack || [];
 
@@ -450,16 +524,16 @@
         function evaluateObjectPath(objectPath, checkValid) {
             objectPath = objectPath || [];
             switch (objectPath[0]) {
-            case '#':
-                return objStack[0] instanceof Iterable ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
-            case '##':
-                return iteratorStack[0];
-            case '#count':
-                return objStack[0] instanceof Iterable ? objStack[0].keys.length : 0;
+                case '#':
+                    return objStack[0] instanceof Iterable ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
+                case '##':
+                    return iteratorStack[0];
+                case '#count':
+                    return objStack[0] instanceof Iterable ? objStack[0].keys.length : 0;
             }
             var value = objStack[0] instanceof Iterable ? objStack[0].values[objStack[0].keys[iteratorStack[0]]] : objStack[0];
             if (objectPath[0]) {
-                var hasPropertyName = evallable(value) && (typeof value !=='object' ? value[objectPath[0]] !== undefined : (value.hasOwnProperty(objectPath[0]) || (Array.isArray(value) && !isNaN(objectPath[0]))));
+                var hasPropertyName = evallable(value) && (typeof value !== 'object' ? value[objectPath[0]] !== undefined : (value.hasOwnProperty(objectPath[0]) || (Array.isArray(value) && !isNaN(objectPath[0]))));
                 if (checkValid && !hasPropertyName && !(objectPath[0] in options.globals)) {
                     evaluateObjectPath.valid = false;
                     return value;
@@ -539,10 +613,10 @@
                         throw new Error('Invalid pipe function');
                     }
                 } catch (e) {
-                    return window.console.warn(e.toString() + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + e.stack.substr(e.toString().length));
+                    return console.warn(e.toString() + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + e.stack.substr(e.toString().length));
                 }
             }
-            return returnArray.length ? $.map(returnArray.concat(value), pass) : value;
+            return returnArray.length ? flatten(returnArray.concat(value)) : value;
         }
 
         function flushOutput(elm) {
@@ -556,7 +630,7 @@
             var savedIteratorStack = iteratorStack.slice(0);
 
             function partial(start, end) {
-                return evaluate(tokens, $.extend({}, options, {
+                return evaluate(tokens, extend({}, options, {
                     html: false,
                     htmlPartial: true,
                     objStack: savedObjStack.slice(0),
@@ -566,12 +640,12 @@
                     end: end
                 }));
             }
-            $(elm).bind('objectchange', function () {
-                $.each(op.attrs, function (i, v) {
-                    $(elm).attr(i, partial(v.offsets[0] - 1, v.offsets[1]));
+            elm.addEventListener('objectchange', function () {
+                each(op.attrs, function (i, v) {
+                    elm.setAttribute(i, partial(v.offsets[0] - 1, v.offsets[1]));
                 });
                 if (op.offsets.length === 2) {
-                    $(elm).html(partial(op.offsets[0], op.offsets[1]));
+                    elm.innerHTML = partial(op.offsets[0], op.offsets[1]);
                 }
             });
         }
@@ -583,60 +657,60 @@
             while (i < e) {
                 var t = tokens[i++];
                 switch (t.op) {
-                case OP_EVAL:
-                    var prevCount = evalCount;
-                    var result = evaluatePipe(t.expression);
-                    if (evallable(result)) {
-                        output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
-                    }
-                    break;
-                case OP_ITER:
-                    objStack.unshift(new Iterable(evaluatePipe(t.expression)));
-                    iteratorStack.unshift(0);
-                    if (!objStack[0].keys.length) {
-                        i = t.index;
-                    }
-                    break;
-                case OP_ITER_END:
-                    if (++iteratorStack[0] >= objStack[0].keys.length) {
-                        objStack.shift();
-                        iteratorStack.shift();
-                    } else {
-                        i = t.index;
-                    }
-                    break;
-                case OP_TEST:
-                    if (!evaluatePipe(t.condition) ^ t.negate) {
-                        i = t.index;
-                    }
-                    break;
-                case OP_JUMP:
-                    i = t.index;
-                    break;
-                default:
-                    if (options.html || options.htmlPartial) {
-                        var currentElm = htmlStack[0];
-                        switch (t.op) {
-                        case HTMLOP_ELEMENT_START:
-                            flushOutput(currentElm);
-                            htmlStack.unshift(document.createElement(t.tagName));
-                            currentElm.appendChild(htmlStack[0]);
-                            createViewFunction(htmlStack[0], t);
-                            break;
-                        case HTMLOP_ELEMENT_END:
-                            flushOutput(currentElm);
-                            htmlStack.shift();
-                            break;
-                        case HTMLOP_ATTR_END:
-                            $(currentElm).attr(t.attrName, output.splice(0).join(''));
-                            break;
-                        case HTMLOP_TEXT:
-                            output.push(t.text);
+                    case OP_EVAL:
+                        var prevCount = evalCount;
+                        var result = evaluatePipe(t.expression);
+                        if (evallable(result)) {
+                            output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
                         }
-                    } else {
-                        output.push(t.value);
+                        break;
+                    case OP_ITER:
+                        objStack.unshift(new Iterable(evaluatePipe(t.expression)));
+                        iteratorStack.unshift(0);
+                        if (!objStack[0].keys.length) {
+                            i = t.index;
+                        }
+                        break;
+                    case OP_ITER_END:
+                        if (++iteratorStack[0] >= objStack[0].keys.length) {
+                            objStack.shift();
+                            iteratorStack.shift();
+                        } else {
+                            i = t.index;
+                        }
+                        break;
+                    case OP_TEST:
+                        if (!evaluatePipe(t.condition) ^ t.negate) {
+                            i = t.index;
+                        }
+                        break;
+                    case OP_JUMP:
                         i = t.index;
-                    }
+                        break;
+                    default:
+                        if (options.html || options.htmlPartial) {
+                            var currentElm = htmlStack[0];
+                            switch (t.op) {
+                                case HTMLOP_ELEMENT_START:
+                                    flushOutput(currentElm);
+                                    htmlStack.unshift(document.createElement(t.tagName));
+                                    currentElm.appendChild(htmlStack[0]);
+                                    createViewFunction(htmlStack[0], t);
+                                    break;
+                                case HTMLOP_ELEMENT_END:
+                                    flushOutput(currentElm);
+                                    htmlStack.shift();
+                                    break;
+                                case HTMLOP_ATTR_END:
+                                    currentElm.setAttribute(t.attrName, output.splice(0).join(''));
+                                    break;
+                                case HTMLOP_TEXT:
+                                    output.push(t.text);
+                            }
+                        } else {
+                            output.push(t.value);
+                            i = t.index;
+                        }
                 }
             }
         } finally {
@@ -656,6 +730,9 @@
     function waterpipe(str, data, options) {
         str = string(str || '');
         options = options || {};
+        if (options.html && typeof document === 'undefined') {
+            throw new Error('HTML mode can only be used in browsers.');
+        }
         var t = cache[str] = (cache[str] || parse(str));
         return evaluate(t, {
             objStack: [data],
@@ -664,9 +741,8 @@
         });
     }
 
-    (typeof exports != "undefined" ? exports : window).waterpipe = waterpipe; // jshint ignore:line
     waterpipe.globals = {};
-    waterpipe.pipes = $.extend(pipes, {
+    waterpipe.pipes = extend(pipes, {
         __default__: constFn(),
         keys: keys,
         max: Math.min,
@@ -860,14 +936,22 @@
     ('?test +plus -minus *multiply /divide %mod ==equals !=notequals <less <=orless >more >=ormore').replace(/(\W{1,2})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    $.each('where first any all sum map test sortby replace let'.split(' '), function (i, v) {
+    each('where first any all sum map test sortby replace let'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
-
-    $(function () {
-        $('script[type="text/x-waterpipe"]').each(function (i, v) {
+    
+    if (typeof document !== 'undefined' && document.querySelectorAll) {
+        each(document.querySelectorAll('script[type="text/x-waterpipe"]'), function (i, v) {
             pipes[v.id] = v.innerHTML;
         });
-    });
-
-}(jQuery, String, Math, Array, document));
+    }
+    if (typeof module === 'object') {
+        waterpipe.with = function () {
+            each(slice.apply(null, arguments), function (i, v) {
+                require(v.indexOf('/') < 0 ? './waterpipe.' + v : v);
+            });
+            return waterpipe;
+        };
+    }
+    return waterpipe;
+}));

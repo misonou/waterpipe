@@ -26,53 +26,65 @@
  * THE SOFTWARE.
  */
 
-(function (waterpipe, exports) {
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define(['waterpipe'], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory(require('./waterpipe'));
+    } else {
+        root.waterpipeFormat = factory(root.waterpipe);
+    }
+} (this, function (waterpipe, internals) {
     'use strict';
 
     waterpipe.pipes[':json'] = JSON.stringify;
     waterpipe.pipes[':query'] = function (obj) {
-        var s = buildParams([], obj);
-        return s.join("&").replace(/%20/g, "+");
+        var arr = buildParams([], obj);
+        return arr.join("&").replace(/%20/g, "+");
     };
     waterpipe.pipes[':date'] = function (obj, format) {
         var date = obj instanceof Date ? obj : typeof obj === 'number' ? new Date(obj) : new Date(Date.parse(obj));
-        return exports.formatDate(date, format, this.DATE_LABELS);
+        return internals.formatDate(date, format, this.DATE_LABELS);
     };
     waterpipe.pipes[':printf'] = function (obj, format) {
-        return exports.sprintf(format, obj);
+        return internals.sprintf(format, obj);
     };
     waterpipe.pipes.__default__ = (function (previous) {
         return function (name) {
             if (name.charAt(0) === '%') {
                 return function (obj) {
-                    return exports.sprintf(name, obj);
+                    return internals.sprintf(name, obj);
                 };
             }
             return previous(name);
         };
-    }(waterpipe.pipes.__default__));
-
-    /*! jquery.js */
-    function buildParams(s, obj, prefix) {
-        if (prefix && Array.isArray(obj)) {
-            for (var i = 0, len = obj.length; i < len; i++) {
-                if (/\[\]$/.test(prefix)) {
-                    s[s.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj[i]);
-                } else {
-                    buildParams(s, obj[i], prefix + "[" + (typeof obj[i] === "object" && obj[i] ? i : "") + "]");
-                }
-            }
-        } else if (typeof obj === "object") {
-            for (var name in obj) {
-                buildParams(s, obj[name], prefix ? prefix + "[" + name + "]" : name);
-            }
-        } else {
-            s[s.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj);
-        }
-        return s;
-    }
+    } (waterpipe.pipes.__default__));
 
     /*jshint ignore:start */
+    internals = {};
+    
+    /*! jquery.js | Copyright jQuery Foundation and other contributors | Released under the MIT license */
+    (function (exports) {
+        exports.buildParams = function (arr, obj, prefix) {
+            if (prefix && Array.isArray(obj)) {
+                for (var i = 0, len = obj.length; i < len; i++) {
+                    if (/\[\]$/.test(prefix)) {
+                        arr[arr.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj[i]);
+                    } else {
+                        exports.buildParams(arr, obj[i], prefix + "[" + (typeof obj[i] === "object" && obj[i] ? i : "") + "]");
+                    }
+                }
+            } else if (typeof obj === "object") {
+                for (var name in obj) {
+                    exports.buildParams(arr, obj[name], prefix ? prefix + "[" + name + "]" : name);
+                }
+            } else {
+                arr[arr.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj);
+            }
+            return arr;
+        }
+    } (internals));
+
     /*! sprintf.js | Copyright (c) 2007-2013 Alexandru Marasteanu <hello at alexei dot ro> | 3 clause BSD license */
     (function (e) {
         function r(e) {
@@ -106,35 +118,35 @@
                     } else h[1] ? a = n[h[1]] : a = n[s++];
                     if (/[^s]/.test(h[8]) && r(a) != "number") throw t("[sprintf] expecting number but found %s", r(a));
                     switch (h[8]) {
-                    case "b":
-                        a = a.toString(2);
-                        break;
-                    case "c":
-                        a = String.fromCharCode(a);
-                        break;
-                    case "d":
-                        a = parseInt(a, 10);
-                        break;
-                    case "e":
-                        a = h[7] ? a.toExponential(h[7]) : a.toExponential();
-                        break;
-                    case "f":
-                        a = h[7] ? parseFloat(a).toFixed(h[7]) : parseFloat(a);
-                        break;
-                    case "o":
-                        a = a.toString(8);
-                        break;
-                    case "s":
-                        a = (a = String(a)) && h[7] ? a.substring(0, h[7]) : a;
-                        break;
-                    case "u":
-                        a >>>= 0;
-                        break;
-                    case "x":
-                        a = a.toString(16);
-                        break;
-                    case "X":
-                        a = a.toString(16).toUpperCase()
+                        case "b":
+                            a = a.toString(2);
+                            break;
+                        case "c":
+                            a = String.fromCharCode(a);
+                            break;
+                        case "d":
+                            a = parseInt(a, 10);
+                            break;
+                        case "e":
+                            a = h[7] ? a.toExponential(h[7]) : a.toExponential();
+                            break;
+                        case "f":
+                            a = h[7] ? parseFloat(a).toFixed(h[7]) : parseFloat(a);
+                            break;
+                        case "o":
+                            a = a.toString(8);
+                            break;
+                        case "s":
+                            a = (a = String(a)) && h[7] ? a.substring(0, h[7]) : a;
+                            break;
+                        case "u":
+                            a >>>= 0;
+                            break;
+                        case "x":
+                            a = a.toString(16);
+                            break;
+                        case "X":
+                            a = a.toString(16).toUpperCase()
                     }
                     a = /[def]/.test(h[8]) && h[3] && a >= 0 ? "+" + a : a, d = h[4] ? h[4] == "0" ? "0" : h[4].charAt(1) : " ", v = h[6] - String(a).length, p = h[6] ? i(d, v) : "", f.push(h[5] ? a + p : p + a)
                 }
@@ -176,10 +188,10 @@
             return r = n.slice(0), r.splice(0, 0, e), t.apply(null, r)
         };
         e.sprintf = t, e.vsprintf = n
-    })(typeof exports != "undefined" ? exports : window);
+    })(internals);
 
-    /*! formatdate.js */
-    (function (e) {
+    /*! formatdate.js | Copyright misonou | Released under the MIT license */
+    (function (exports) {
         'use strict';
 
         var standardFormat = {
@@ -229,40 +241,40 @@
             function getString(specifier) {
                 var len = specifier.length;
                 switch (specifier.charAt(0)) {
-                case 'd':
-                    return len === 4 ? translations.longWeekday[date.getDay()] : len === 3 ? translations.shortWeekday[date.getDay()] : padZero(date.getDate(), len);
-                case 'f':
-                case 'F':
-                    var str = (date.getMilliseconds() + '000000').substr(0, len);
-                    return specifier.charAt(0) === 'f' || !/^0+$/.test(str) ? str : '';
-                case 'g':
-                    return translations.era[+(date.getFullYear() >= 0)];
-                case 'h':
-                    return padZero(date.getHours() % 12, len);
-                case 'H':
-                    return padZero(date.getHours(), len);
-                case 'm':
-                    return padZero(date.getMinutes(), len);
-                case 'M':
-                    return len === 4 ? translations.longMonth[date.getMonth()] : len === 3 ? translations.shortMonth[date.getMonth()] : padZero(date.getMonth() + 1, len);
-                case 's':
-                    return padZero(date.getSeconds(), len);
-                case 't':
-                    return translations.designator[+(date.getHours() >= 12)].substr(len);
-                case 'y':
-                    return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
-                case 'K':
-                case 'z':
-                    var offset = date.getTimezoneOffset();
-                    return len === 3 || specifier === 'K' ?
-                        (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, 2) + ':' + padZero((Math.abs(offset) % 60), 2) :
-                        (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, len);
-                case ':':
-                    return translations.timeSeparator;
-                case '/':
-                    return translations.dateSeparator;
-                default:
-                    return '';
+                    case 'd':
+                        return len === 4 ? translations.longWeekday[date.getDay()] : len === 3 ? translations.shortWeekday[date.getDay()] : padZero(date.getDate(), len);
+                    case 'f':
+                    case 'F':
+                        var str = (date.getMilliseconds() + '000000').substr(0, len);
+                        return specifier.charAt(0) === 'f' || !/^0+$/.test(str) ? str : '';
+                    case 'g':
+                        return translations.era[+(date.getFullYear() >= 0)];
+                    case 'h':
+                        return padZero(date.getHours() % 12, len);
+                    case 'H':
+                        return padZero(date.getHours(), len);
+                    case 'm':
+                        return padZero(date.getMinutes(), len);
+                    case 'M':
+                        return len === 4 ? translations.longMonth[date.getMonth()] : len === 3 ? translations.shortMonth[date.getMonth()] : padZero(date.getMonth() + 1, len);
+                    case 's':
+                        return padZero(date.getSeconds(), len);
+                    case 't':
+                        return translations.designator[+(date.getHours() >= 12)].substr(len);
+                    case 'y':
+                        return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
+                    case 'K':
+                    case 'z':
+                        var offset = date.getTimezoneOffset();
+                        return len === 3 || specifier === 'K' ?
+                            (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, 2) + ':' + padZero((Math.abs(offset) % 60), 2) :
+                            (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, len);
+                    case ':':
+                        return translations.timeSeparator;
+                    case '/':
+                        return translations.dateSeparator;
+                    default:
+                        return '';
                 }
             }
 
@@ -275,6 +287,6 @@
         }
 
         exports.formatDate = formatDate;
-    })(typeof exports != "undefined" ? exports : window);
+    })(internals);
     /*jshint ignore:end */
-}(window.waterpipe, {}));
+}));
