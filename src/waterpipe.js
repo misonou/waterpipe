@@ -1,7 +1,7 @@
 /*jshint regexp:true,browser:true,jquery:true,debug:true,-W083 */
 
 /*!
- * Waterpipe JavaScript Template v1.0.0
+ * Waterpipe JavaScript Template v1.0.1
  *
  * The MIT License (MIT)
  *
@@ -939,6 +939,12 @@
     each('where first any all sum map test sortby replace let'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
+
+    if (!Array.isArray) {
+        Array.isArray = function(arg) {
+            return Object.prototype.toString.call(arg) === '[object Array]';
+        };
+    }
     
     if (typeof document !== 'undefined' && document.querySelectorAll) {
         each(document.querySelectorAll('script[type="text/x-waterpipe"]'), function (i, v) {
