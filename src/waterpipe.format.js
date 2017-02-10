@@ -62,7 +62,7 @@
 
     /*jshint ignore:start */
     internals = {};
-    
+
     /*! jquery.js | Copyright jQuery Foundation and other contributors | Released under the MIT license */
     (function (exports) {
         exports.buildParams = function (arr, obj, prefix) {
@@ -260,7 +260,7 @@
                     case 's':
                         return padZero(date.getSeconds(), len);
                     case 't':
-                        return translations.designator[+(date.getHours() >= 12)].substr(len);
+                        return translations.designator[+(date.getHours() >= 12)].substr(0, len);
                     case 'y':
                         return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
                     case 'K':
