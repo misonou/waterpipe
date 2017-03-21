@@ -1,5 +1,3 @@
-/*jshint regexp:true,browser:true,-W083 */
-
 /*!
  * Waterpipe JavaScript Template "format" Pipe
  *
@@ -34,7 +32,7 @@
     } else {
         root.waterpipeFormat = factory(root.waterpipe);
     }
-} (this, function (waterpipe, internals) {
+}(this, function (waterpipe, internals) {
     'use strict';
 
     waterpipe.pipes[':json'] = JSON.stringify;
@@ -58,7 +56,7 @@
             }
             return previous(name);
         };
-    } (waterpipe.pipes.__default__));
+    }(waterpipe.pipes.__default__));
 
     /*jshint ignore:start */
     internals = {};
@@ -83,7 +81,7 @@
             }
             return arr;
         }
-    } (internals));
+    }(internals));
 
     /*! sprintf.js | Copyright (c) 2007-2013 Alexandru Marasteanu <hello at alexei dot ro> | 3 clause BSD license */
     (function (e) {
@@ -118,35 +116,35 @@
                     } else h[1] ? a = n[h[1]] : a = n[s++];
                     if (/[^s]/.test(h[8]) && r(a) != "number") throw t("[sprintf] expecting number but found %s", r(a));
                     switch (h[8]) {
-                        case "b":
-                            a = a.toString(2);
-                            break;
-                        case "c":
-                            a = String.fromCharCode(a);
-                            break;
-                        case "d":
-                            a = parseInt(a, 10);
-                            break;
-                        case "e":
-                            a = h[7] ? a.toExponential(h[7]) : a.toExponential();
-                            break;
-                        case "f":
-                            a = h[7] ? parseFloat(a).toFixed(h[7]) : parseFloat(a);
-                            break;
-                        case "o":
-                            a = a.toString(8);
-                            break;
-                        case "s":
-                            a = (a = String(a)) && h[7] ? a.substring(0, h[7]) : a;
-                            break;
-                        case "u":
-                            a >>>= 0;
-                            break;
-                        case "x":
-                            a = a.toString(16);
-                            break;
-                        case "X":
-                            a = a.toString(16).toUpperCase()
+                    case "b":
+                        a = a.toString(2);
+                        break;
+                    case "c":
+                        a = String.fromCharCode(a);
+                        break;
+                    case "d":
+                        a = parseInt(a, 10);
+                        break;
+                    case "e":
+                        a = h[7] ? a.toExponential(h[7]) : a.toExponential();
+                        break;
+                    case "f":
+                        a = h[7] ? parseFloat(a).toFixed(h[7]) : parseFloat(a);
+                        break;
+                    case "o":
+                        a = a.toString(8);
+                        break;
+                    case "s":
+                        a = (a = String(a)) && h[7] ? a.substring(0, h[7]) : a;
+                        break;
+                    case "u":
+                        a >>>= 0;
+                        break;
+                    case "x":
+                        a = a.toString(16);
+                        break;
+                    case "X":
+                        a = a.toString(16).toUpperCase()
                     }
                     a = /[def]/.test(h[8]) && h[3] && a >= 0 ? "+" + a : a, d = h[4] ? h[4] == "0" ? "0" : h[4].charAt(1) : " ", v = h[6] - String(a).length, p = h[6] ? i(d, v) : "", f.push(h[5] ? a + p : p + a)
                 }
@@ -241,40 +239,40 @@
             function getString(specifier) {
                 var len = specifier.length;
                 switch (specifier.charAt(0)) {
-                    case 'd':
-                        return len === 4 ? translations.longWeekday[date.getDay()] : len === 3 ? translations.shortWeekday[date.getDay()] : padZero(date.getDate(), len);
-                    case 'f':
-                    case 'F':
-                        var str = (date.getMilliseconds() + '000000').substr(0, len);
-                        return specifier.charAt(0) === 'f' || !/^0+$/.test(str) ? str : '';
-                    case 'g':
-                        return translations.era[+(date.getFullYear() >= 0)];
-                    case 'h':
-                        return padZero(date.getHours() % 12, len);
-                    case 'H':
-                        return padZero(date.getHours(), len);
-                    case 'm':
-                        return padZero(date.getMinutes(), len);
-                    case 'M':
-                        return len === 4 ? translations.longMonth[date.getMonth()] : len === 3 ? translations.shortMonth[date.getMonth()] : padZero(date.getMonth() + 1, len);
-                    case 's':
-                        return padZero(date.getSeconds(), len);
-                    case 't':
-                        return translations.designator[+(date.getHours() >= 12)].substr(0, len);
-                    case 'y':
-                        return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
-                    case 'K':
-                    case 'z':
-                        var offset = date.getTimezoneOffset();
-                        return len === 3 || specifier === 'K' ?
-                            (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, 2) + ':' + padZero((Math.abs(offset) % 60), 2) :
-                            (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, len);
-                    case ':':
-                        return translations.timeSeparator;
-                    case '/':
-                        return translations.dateSeparator;
-                    default:
-                        return '';
+                case 'd':
+                    return len === 4 ? translations.longWeekday[date.getDay()] : len === 3 ? translations.shortWeekday[date.getDay()] : padZero(date.getDate(), len);
+                case 'f':
+                case 'F':
+                    var str = (date.getMilliseconds() + '000000').substr(0, len);
+                    return specifier.charAt(0) === 'f' || !/^0+$/.test(str) ? str : '';
+                case 'g':
+                    return translations.era[+(date.getFullYear() >= 0)];
+                case 'h':
+                    return padZero((date.getHours() % 12) || 12, len);
+                case 'H':
+                    return padZero(date.getHours(), len);
+                case 'm':
+                    return padZero(date.getMinutes(), len);
+                case 'M':
+                    return len === 4 ? translations.longMonth[date.getMonth()] : len === 3 ? translations.shortMonth[date.getMonth()] : padZero(date.getMonth() + 1, len);
+                case 's':
+                    return padZero(date.getSeconds(), len);
+                case 't':
+                    return translations.designator[+(date.getHours() >= 12)].substr(0, len);
+                case 'y':
+                    return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
+                case 'K':
+                case 'z':
+                    var offset = date.getTimezoneOffset();
+                    return len === 3 || specifier === 'K' ?
+                        (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, 2) + ':' + padZero((Math.abs(offset) % 60), 2) :
+                        (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, len);
+                case ':':
+                    return translations.timeSeparator;
+                case '/':
+                    return translations.dateSeparator;
+                default:
+                    return '';
                 }
             }
 
