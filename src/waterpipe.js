@@ -1,11 +1,9 @@
-/*jshint regexp:true,browser:true,jquery:true,debug:true,-W083 */
-
 /*!
- * Waterpipe JavaScript Template v1.0.1
+ * Waterpipe JavaScript Template v2.0.0
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 misonou
+ * Copyright (c) 2017 misonou
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +32,7 @@
     } else {
         root.waterpipe = factory();
     }
-} (this, function () {
+}(this, function () {
     'use strict';
 
     var OP_EVAL = 1;
@@ -90,6 +88,20 @@
         return value !== undefined && value !== null;
     }
 
+    function primitive(value) {
+        return typeof value !== 'object' || value === null;
+    }
+
+    function hasProperty(value, name) {
+        if (!evallable(value)) {
+            return false;
+        }
+        if (typeof value !== 'object') {
+            return value[name] !== undefined;
+        }
+        return value.hasOwnProperty(name) || (Array.isArray(value) && /^\d+$/.test(name));
+    }
+
     function pass(value) {
         return value;
     }
@@ -117,6 +129,15 @@
         return str.charAt(0) === '/' && (parseRegExp[str] || (parseRegExp[str] = /\/((?![*+?])(?:[^\r\n\[/\\]|\\.|\[(?:[^\r\n\]\\]|\\.)*\])+)\/((?:g(?:im?|mi?)?|i(?:gm?|mg?)?|m(?:gi?|ig?)?)?)/g.test(str) && new RegExp(RegExp.$1, RegExp.$2)));
     }
 
+    function parseObjectPath(str) {
+        var t = [];
+        var m, r = /((?!^)\$)?([^$.()][^.]*)|\$\(([^)]+)\)/ig;
+        while ((m = r.exec(str)) !== null) {
+            t.push(m[1] || m[3] ? parseObjectPath(m[3] || m[2]) : m[2]);
+        }
+        return t.length ? t : [str];
+    }
+
     function escape(str) {
         var re = /["'&<>]/;
         if (!re.exec(str)) {
@@ -128,23 +149,23 @@
         for (index = re.lastIndex; index < str.length; index++) {
             var escape;
             switch (str.charCodeAt(index)) {
-                case 34: // "
-                    escape = '&quot;';
-                    break;
-                case 38: // &
-                    escape = '&amp;';
-                    break;
-                case 39: // '
-                    escape = '&#39;';
-                    break;
-                case 60: // <
-                    escape = '&lt;';
-                    break;
-                case 62: // >
-                    escape = '&gt;';
-                    break;
-                default:
-                    continue;
+            case 34: // "
+                escape = '&quot;';
+                break;
+            case 38: // &
+                escape = '&amp;';
+                break;
+            case 39: // '
+                escape = '&#39;';
+                break;
+            case 60: // <
+                escape = '&lt;';
+                break;
+            case 62: // >
+                escape = '&gt;';
+                break;
+            default:
+                continue;
             }
             if (lastIndex !== index) {
                 html += str.substring(lastIndex, index);
@@ -236,7 +257,7 @@
     }
 
     function inherit(base, values) {
-        function Anonymous() { }
+        function Anonymous() {}
         Anonymous.prototype = base;
         return extend(new Anonymous(), values);
     }
@@ -245,7 +266,7 @@
         var arr = str.substr(0, cstart || start).split('\n').reverse();
         var lineStart = str.substring(str.lastIndexOf('\n', start) + 1, start).replace(/^\s+/, '').substr(-20);
         var line = str.substring(start, str.indexOf('\n', end) + 1 || str.length).replace(/\r?\n|\s+$/g, '').substr(0, end - start + 20);
-        return waterpipe(' at line {{0}} column {{1}}:\n\t{{&2}}{{&3}}\n\t{{2.length + $4 repeat \\ }}{{5 repeat ^}}', [arr.length, arr[0].length + 1, lineStart, line, cstart - start || 0, cend - cstart || end - start]);
+        return waterpipe(' at line {{$0}} column {{$1}}:\n\t{{&$2}}{{&$3}}\n\t{{$2.length + $4 repeat \\ }}{{$5 repeat ^}}', [arr.length, arr[0].length + 1, lineStart, line, cstart - start || 0, cend - cstart || end - start]);
     }
 
     function strargs(fn) {
@@ -267,10 +288,11 @@
         }
         Pipe.prototype = [];
 
-        function PipeArgument(prev, str, start, end) {
+        function PipeArgument(prev, str, start, end, canEvaluate) {
             var self = this;
             self.textValue = str;
             self.value = typeValue(str);
+            self.canEvaluate = self.value === self.textValue && canEvaluate;
             self.start = start;
             self.end = end;
             if (prev) {
@@ -281,7 +303,7 @@
             return (this.objectPath = constFn(parseObjectPath(this.textValue.replace(/^\$/, '')))).call();
         };
         PipeArgument.prototype.length = function () {
-            if (this.value === '[') {
+            if (this.value === '[' && this.canEvaluate === undefined) {
                 for (var t = this.next, i = 1, count = 1; t; t = t.next, i++) {
                     if (t.value === '[') {
                         count++;
@@ -290,7 +312,7 @@
                     }
                 }
             }
-            this.length = function () { };
+            this.length = function () {};
         };
 
         function assert(result) {
@@ -299,20 +321,11 @@
             }
         }
 
-        function parseObjectPath(str) {
-            var t = [];
-            var m, r = /((?!^)\$)?([^$.()][^.]*)|\$\(([^)]+)\)/ig;
-            while ((m = r.exec(str)) !== null) {
-                t.push(m[1] || m[3] ? parseObjectPath(m[3] || m[2]) : m[2]);
-            }
-            return t;
-        }
-
         function parsePipe(str) {
             var t = new Pipe(str);
-            var m, r = /\$?(?:[^\s\\]|\\.)+/ig;
+            var m, r = /([^\s\\"]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"/ig;
             while ((m = r.exec(str)) !== null) {
-                t.unshift(new PipeArgument(t[0], m[0].replace(/\\(\s)/g, '$1'), t.index + m.index, t.index + r.lastIndex));
+                t.unshift(new PipeArgument(t[0], (m[2] !== undefined ? m[2] : m[0]).replace(/\\(.)/g, '$1'), t.index + m.index, t.index + r.lastIndex, m[2] !== undefined ? false : m[1] === '$' ? true : undefined));
             }
             return t.reverse();
         }
@@ -357,66 +370,66 @@
                 lastIndex = r.lastIndex;
 
                 switch (m[0].charAt(0)) {
-                    case '<':
-                        if (m[1]) {
-                            if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
-                                current.opened = false;
-                            }
-                        } else {
-                            endTextContent();
-                            htmlStack.unshift({
-                                op: HTMLOP_ELEMENT_START,
-                                tagName: m[2],
-                                offsets: [],
-                                attrs: {}
-                            });
-                            tokens.push(htmlStack[0]);
+                case '<':
+                    if (m[1]) {
+                        if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
+                            current.opened = false;
                         }
-                        break;
-                    case '>':
-                    case '/':
-                        if (assert(m[0], current && current.tagName)) {
-                            if (current.opened === false || m[0] === '/>') {
-                                endTextContent();
-                                tokens.push({
-                                    op: HTMLOP_ELEMENT_END
-                                });
-                                htmlStack.shift();
-                                startTextContent();
-                            } else if (m[0] === '>') {
-                                current.opened = true;
-                                startTextContent();
-                            }
-                        }
-                        break;
-                    case '"':
-                        if (assert(m[0], current && current.attrName)) {
+                    } else {
+                        endTextContent();
+                        htmlStack.unshift({
+                            op: HTMLOP_ELEMENT_START,
+                            tagName: m[2],
+                            offsets: [],
+                            attrs: {}
+                        });
+                        tokens.push(htmlStack[0]);
+                    }
+                    break;
+                case '>':
+                case '/':
+                    if (assert(m[0], current && current.tagName)) {
+                        if (current.opened === false || m[0] === '/>') {
                             endTextContent();
                             tokens.push({
-                                op: HTMLOP_ATTR_END,
-                                attrName: current.attrName
+                                op: HTMLOP_ELEMENT_END
                             });
                             htmlStack.shift();
+                            startTextContent();
+                        } else if (m[0] === '>') {
+                            current.opened = true;
+                            startTextContent();
                         }
-                        break;
-                    default:
-                        if (assert(m[0], current)) {
-                            if (m[0].indexOf('=') < 0) {
-                                tokens.push({
-                                    op: HTMLOP_ATTR_END,
-                                    attrName: m[3]
-                                });
-                            } else {
-                                htmlStack.unshift({
-                                    op: HTMLOP_ATTR_START,
-                                    attrName: m[3],
-                                    offsets: []
-                                });
-                                current.attrs[m[3]] = htmlStack[0];
-                                tokens.push(htmlStack[0]);
-                                startTextContent();
-                            }
+                    }
+                    break;
+                case '"':
+                    if (assert(m[0], current && current.attrName)) {
+                        endTextContent();
+                        tokens.push({
+                            op: HTMLOP_ATTR_END,
+                            attrName: current.attrName
+                        });
+                        htmlStack.shift();
+                    }
+                    break;
+                default:
+                    if (assert(m[0], current)) {
+                        if (m[0].indexOf('=') < 0) {
+                            tokens.push({
+                                op: HTMLOP_ATTR_END,
+                                attrName: m[3]
+                            });
+                        } else {
+                            htmlStack.unshift({
+                                op: HTMLOP_ATTR_START,
+                                attrName: m[3],
+                                offsets: []
+                            });
+                            current.attrs[m[3]] = htmlStack[0];
+                            tokens.push(htmlStack[0]);
+                            startTextContent();
                         }
+                    }
                 }
             }
             if (lastIndex !== str.length) {
@@ -433,74 +446,77 @@
             lastIndex = r.lastIndex;
 
             switch (m[1]) {
-                case '!':
-                    break;
-                case '/':
-                    assert(controlStack[0] && m[2] === controlStack[0].tokenName);
-                    controlStack[0].token.index = tokens.length;
-                    if (m[2] === TOKEN_FOREACH) {
-                        tokens.push({
-                            op: OP_ITER_END,
-                            index: controlStack[0].tokenIndex + 1
-                        });
-                    }
-                    controlStack.shift();
-                    break;
-                case TOKEN_IF:
-                case TOKEN_IFNOT:
-                    controlStack.unshift({
-                        tokenIndex: tokens.length,
-                        tokenName: TOKEN_IF,
-                        token: {
-                            op: OP_TEST,
-                            condition: parsePipe(m[2]),
-                            negate: m[1] === TOKEN_IFNOT
-                        }
-                    });
-                    tokens.push(controlStack[0].token);
-                    break;
-                case TOKEN_ELSE:
-                case TOKEN_ELSEIF:
-                case TOKEN_ELSEIFNOT:
-                    assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
-                    var previousControl = controlStack.splice(0, 1, {
-                        tokenIndex: tokens.length,
-                        tokenName: TOKEN_IF,
-                        token: {
-                            op: OP_JUMP
-                        }
-                    })[0];
-                    (previousControl.tokenIf || previousControl.token).index = tokens.length + 1;
-                    if (previousControl.token.op === OP_JUMP) {
-                        controlStack[0].token = previousControl.token;
-                    }
-                    tokens.push(controlStack[0].token);
-                    if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
-                        controlStack[0].tokenIf = {
-                            op: OP_TEST,
-                            condition: parsePipe(m[2]),
-                            negate: m[1] === TOKEN_ELSEIFNOT
-                        };
-                        tokens.push(controlStack[0].tokenIf);
-                    }
-                    break;
-                case TOKEN_FOREACH:
-                    controlStack.unshift({
-                        tokenIndex: tokens.length,
-                        tokenName: TOKEN_FOREACH,
-                        token: {
-                            op: OP_ITER,
-                            expression: parsePipe(m[2])
-                        }
-                    });
-                    tokens.push(controlStack[0].token);
-                    break;
-                default:
+            case '!':
+                break;
+            case '/':
+                assert(controlStack[0] && m[2] === controlStack[0].tokenName);
+                controlStack[0].token.index = tokens.length;
+                if (controlStack[0].tokenIf && !controlStack[0].tokenIf.index) {
+                    controlStack[0].tokenIf.index = tokens.length;
+                }
+                if (m[2] === TOKEN_FOREACH) {
                     tokens.push({
-                        op: OP_EVAL,
-                        expression: parsePipe(m[2]),
-                        noescape: m[1] === '&'
+                        op: OP_ITER_END,
+                        index: controlStack[0].tokenIndex + 1
                     });
+                }
+                controlStack.shift();
+                break;
+            case TOKEN_IF:
+            case TOKEN_IFNOT:
+                controlStack.unshift({
+                    tokenIndex: tokens.length,
+                    tokenName: TOKEN_IF,
+                    token: {
+                        op: OP_TEST,
+                        condition: parsePipe(m[2]),
+                        negate: m[1] === TOKEN_IFNOT
+                    }
+                });
+                tokens.push(controlStack[0].token);
+                break;
+            case TOKEN_ELSE:
+            case TOKEN_ELSEIF:
+            case TOKEN_ELSEIFNOT:
+                assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
+                var previousControl = controlStack.splice(0, 1, {
+                    tokenIndex: tokens.length,
+                    tokenName: TOKEN_IF,
+                    token: {
+                        op: OP_JUMP
+                    }
+                })[0];
+                (previousControl.tokenIf || previousControl.token).index = tokens.length + 1;
+                if (previousControl.token.op === OP_JUMP) {
+                    controlStack[0].token = previousControl.token;
+                }
+                tokens.push(controlStack[0].token);
+                if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
+                    controlStack[0].tokenIf = {
+                        op: OP_TEST,
+                        condition: parsePipe(m[2]),
+                        negate: m[1] === TOKEN_ELSEIFNOT
+                    };
+                    tokens.push(controlStack[0].tokenIf);
+                }
+                break;
+            case TOKEN_FOREACH:
+                controlStack.unshift({
+                    tokenIndex: tokens.length,
+                    tokenName: TOKEN_FOREACH,
+                    token: {
+                        op: OP_ITER,
+                        expression: parsePipe(m[2])
+                    }
+                });
+                tokens.push(controlStack[0].token);
+                break;
+            default:
+                tokens.push({
+                    op: OP_EVAL,
+                    expression: parsePipe(m[2]),
+                    noescape: m[1] === '&'
+                });
             }
         }
         if (lastIndex !== str.length) {
@@ -521,28 +537,59 @@
             this.values = obj;
         }
 
-        function evaluateObjectPath(objectPath, checkValid) {
-            objectPath = objectPath || [];
-            switch (objectPath[0]) {
+        function objAt(index) {
+            if (index < 0 || index >= objStack.length) {
+                return undefined;
+            }
+            return objStack[index] instanceof Iterable ? objStack[index].values[objStack[index].keys[iteratorStack[index]]] : objStack[index];
+        }
+
+        function evaluateObjectPath(objectPath) {
+            if (!objectPath || !objectPath[0]) {
+                evaluateObjectPath.valid = true;
+                return objAt(0);
+            }
+            var value;
+            if (typeof objectPath[0] === 'string') {
+                evaluateObjectPath.valid = objectPath[0].length > 2;
+                switch (objectPath[0]) {
+                case '.':
+                    return objAt(0);
                 case '#':
+                case '#key':
                     return objStack[0] instanceof Iterable ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
                 case '##':
+                case '#index':
                     return iteratorStack[0];
                 case '#count':
                     return objStack[0] instanceof Iterable ? objStack[0].keys.length : 0;
-            }
-            var value = objStack[0] instanceof Iterable ? objStack[0].values[objStack[0].keys[iteratorStack[0]]] : objStack[0];
-            if (objectPath[0]) {
-                var hasPropertyName = evallable(value) && (typeof value !== 'object' ? value[objectPath[0]] !== undefined : (value.hasOwnProperty(objectPath[0]) || (Array.isArray(value) && !isNaN(objectPath[0]))));
-                if (checkValid && !hasPropertyName && !(objectPath[0] in options.globals)) {
-                    evaluateObjectPath.valid = false;
-                    return value;
+                case '@root':
+                    return objAt(objStack.length - 1);
+                default:
+                    if (objectPath[0].charAt(0) === '@') {
+                        value = objAt(parseInt(objectPath[0].slice(1)));
+                    }
                 }
-                value = (hasPropertyName ? value : options.globals)[objectPath[0]];
             }
+
+            var name = Array.isArray(objectPath[0]) ? string(evaluateObjectPath(objectPath[0])) : objectPath[0];
+            for (var j = 0, length = objStack.length; j < length; j++) {
+                value = objAt(j);
+                if (hasProperty(value, name)) {
+                    break;
+                }
+            }
+            if (j === objStack.length) {
+                value = options.globals;
+                if (!(name in value)) {
+                    evaluateObjectPath.valid = false;
+                    return;
+                }
+            }
+            value = value[name];
+
             for (var i = 1, len = objectPath.length; i < len && evallable(value); i++) {
-                var name = Array.isArray(objectPath[i]) ? string(evaluateObjectPath(objectPath[i])) : objectPath[i];
-                value = value[name];
+                value = value[Array.isArray(objectPath[i]) ? string(evaluateObjectPath(objectPath[i])) : objectPath[i]];
             }
             evaluateObjectPath.valid = true;
             return typeof value === 'function' ? undefined : value;
@@ -552,68 +599,122 @@
             start = start || 0;
             end = end || pipe.length - 1;
 
-            var input = evaluateObjectPath();
-            var value = evaluateObjectPath(pipe[start] && pipe[start].objectPath(), true);
             var returnArray = [];
-            var i = start + evaluateObjectPath.valid;
+            var input = evaluateObjectPath();
+            var i = start;
+            var resetPos = start;
 
-            function varargs(count) {
-                var arr = new Array(Math.max(0, count || 0));
-                for (var i = 0, len = arr.length; i < len; i++) {
-                    arr[i] = varargs.next();
+
+            var varargs = {
+                globals: options.globals,
+                eval: function (objectPath) {
+                    return evaluateObjectPath(parseObjectPath(objectPath));
+                },
+                stop: function () {
+                    i = end + 1;
+                    return value;
+                },
+                push: function (value) {
+                    returnArray.push(value);
+                    return value;
+                },
+                reset: function () {
+                    resetPos = i;
+                    if (i <= end && pipe[i].textValue === '.') {
+                        return (++i, input);
+                    }
+                    return varargs.next();
+                },
+                hasArgs: function () {
+                    return i <= end;
+                },
+                raw: function () {
+                    return i <= end ? varargs.fn() || pipe[i++].value : undefined;
+                },
+                next: function (acceptFn) {
+                    var reset = resetPos === i;
+                    if (i > end) {
+                        return reset ? input : undefined;
+                    }
+                    if (pipe[i].canEvaluate === false) {
+                        return pipe[i++].value;
+                    }
+                    var fn = acceptFn !== false && varargs.fn();
+                    if (fn) {
+                        return fn(reset ? input : value);
+                    }
+                    var v = evaluateObjectPath(pipe[i].objectPath());
+                    if (pipe[i].canEvaluate || (evaluateObjectPath.valid && (reset || !primitive(value) || primitive(v)))) {
+                        return (++i, v);
+                    }
+                    return reset ? input : pipe[i++].value;
+                },
+                fn: function (wrapFn) {
+                    var start = i;
+                    var len = i <= end && pipe[i].length();
+                    if (len) {
+                        i += len + 1;
+                        return function (obj, index) {
+                            try {
+                                objStack.unshift(arguments.length ? obj : value);
+                                iteratorStack.unshift(index);
+                                return evaluatePipe(pipe, start + 1, start + len - 1);
+                            } finally {
+                                objStack.shift();
+                                iteratorStack.shift();
+                            }
+                        };
+                    }
+                    if (typeof wrapFn === 'function') {
+                        return wrapFn(varargs.next(false));
+                    }
                 }
-                return arr;
-            }
-            varargs.hasArgs = function (reqObjectPath) {
-                return i <= end && (!reqObjectPath || pipe[i].textValue.charAt(0) === '$');
             };
-            varargs.next = function () {
-                return i <= end ? pipe[i].textValue.charAt(0) === '$' ? evaluateObjectPath(pipe[i++].objectPath()) : pipe[i++].value : undefined;
-            };
-            varargs.fn = function () {
-                var start = i;
-                var len = i <= end && pipe[i].length();
-                if (len) {
-                    i += len + 1;
-                    return function (obj, index) {
-                        try {
-                            objStack.unshift(obj);
-                            iteratorStack.unshift(index);
-                            return evaluatePipe(pipe, start + 1, start + len - 1);
-                        } finally {
-                            objStack.shift(obj);
-                            iteratorStack.shift();
-                        }
-                    };
-                }
-            };
+
+            var value = varargs.reset();
             while (i <= end) {
                 var startpos = i;
                 var name = pipe[i++].textValue;
-                if (name === '|') {
-                    returnArray.push(value);
-                    value = varargs.hasArgs(true) ? varargs.next() : input;
-                } else if (name === '&&' || name === '||') {
-                    if (!!value ^ (name === '&&')) {
-                        break;
-                    }
-                    value = (varargs.fn() || (varargs.hasArgs(true) ? constFn(varargs.next()) : pass))(input);
-                } else try {
+                try {
                     var func = pipes[name] || pipes.__default__(name);
                     if (typeof func === 'function') {
-                        value = func.apply(options.globals, func.varargs ? [value, varargs] : [value].concat(varargs(func.length - 1)));
+                        if (func.varargs) {
+                            value = func.call(options.globals, value, varargs);
+                        } else {
+                            switch (func.length) {
+                            case 1:
+                                value = func.call(options.globals, value);
+                                break;
+                            case 2:
+                                value = func.call(options.globals, value, varargs.next());
+                                break;
+                            case 3:
+                                value = func.call(options.globals, value, varargs.next(), varargs.next());
+                                break;
+                            case 4:
+                                value = func.call(options.globals, value, varargs.next(), varargs.next(), varargs.next());
+                                break;
+                            default:
+                                var args = new Array(func.length);
+                                args[0] = value;
+                                for (var j = 1, len = func.length; j < len; i++) {
+                                    args[j] = varargs.next();
+                                }
+                                value = func.apply(options.globals, args);
+                            }
+                        }
                     } else if (typeof func === 'string') {
                         value = waterpipe(func, value, options);
                         if (options.html && value instanceof Node) {
                             return void htmlStack[0].appendChild(value);
                         }
-                    } else if (startpos === start) {
-                        value = undefined;
+                    } else if (startpos === resetPos) {
+                        value = pipe[i - 1].canEvaluate === false ? pipe[i - 1].value : undefined;
                     } else {
                         throw new Error('Invalid pipe function');
                     }
                 } catch (e) {
-                    return console.warn(e.toString() + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + e.stack.substr(e.toString().length));
+                    return console.warn(e.toString() + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
                 }
             }
             return returnArray.length ? flatten(returnArray.concat(value)) : value;
@@ -657,60 +758,60 @@
             while (i < e) {
                 var t = tokens[i++];
                 switch (t.op) {
-                    case OP_EVAL:
-                        var prevCount = evalCount;
-                        var result = evaluatePipe(t.expression);
-                        if (evallable(result)) {
-                            output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
-                        }
-                        break;
-                    case OP_ITER:
-                        objStack.unshift(new Iterable(evaluatePipe(t.expression)));
-                        iteratorStack.unshift(0);
-                        if (!objStack[0].keys.length) {
-                            i = t.index;
-                        }
-                        break;
-                    case OP_ITER_END:
-                        if (++iteratorStack[0] >= objStack[0].keys.length) {
-                            objStack.shift();
-                            iteratorStack.shift();
-                        } else {
-                            i = t.index;
-                        }
-                        break;
-                    case OP_TEST:
-                        if (!evaluatePipe(t.condition) ^ t.negate) {
-                            i = t.index;
-                        }
-                        break;
-                    case OP_JUMP:
+                case OP_EVAL:
+                    var prevCount = evalCount;
+                    var result = evaluatePipe(t.expression);
+                    if (evallable(result)) {
+                        output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
+                    }
+                    break;
+                case OP_ITER:
+                    objStack.unshift(new Iterable(evaluatePipe(t.expression)));
+                    iteratorStack.unshift(0);
+                    if (!objStack[0].keys.length) {
                         i = t.index;
-                        break;
-                    default:
-                        if (options.html || options.htmlPartial) {
-                            var currentElm = htmlStack[0];
-                            switch (t.op) {
-                                case HTMLOP_ELEMENT_START:
-                                    flushOutput(currentElm);
-                                    htmlStack.unshift(document.createElement(t.tagName));
-                                    currentElm.appendChild(htmlStack[0]);
-                                    createViewFunction(htmlStack[0], t);
-                                    break;
-                                case HTMLOP_ELEMENT_END:
-                                    flushOutput(currentElm);
-                                    htmlStack.shift();
-                                    break;
-                                case HTMLOP_ATTR_END:
-                                    currentElm.setAttribute(t.attrName, output.splice(0).join(''));
-                                    break;
-                                case HTMLOP_TEXT:
-                                    output.push(t.text);
-                            }
-                        } else {
-                            output.push(t.value);
-                            i = t.index;
+                    }
+                    break;
+                case OP_ITER_END:
+                    if (++iteratorStack[0] >= objStack[0].keys.length) {
+                        objStack.shift();
+                        iteratorStack.shift();
+                    } else {
+                        i = t.index;
+                    }
+                    break;
+                case OP_TEST:
+                    if (!evaluatePipe(t.condition) ^ t.negate) {
+                        i = t.index;
+                    }
+                    break;
+                case OP_JUMP:
+                    i = t.index;
+                    break;
+                default:
+                    if (options.html || options.htmlPartial) {
+                        var currentElm = htmlStack[0];
+                        switch (t.op) {
+                        case HTMLOP_ELEMENT_START:
+                            flushOutput(currentElm);
+                            htmlStack.unshift(document.createElement(t.tagName));
+                            currentElm.appendChild(htmlStack[0]);
+                            createViewFunction(htmlStack[0], t);
+                            break;
+                        case HTMLOP_ELEMENT_END:
+                            flushOutput(currentElm);
+                            htmlStack.shift();
+                            break;
+                        case HTMLOP_ATTR_END:
+                            currentElm.setAttribute(t.attrName, output.splice(0).join(''));
+                            break;
+                        case HTMLOP_TEXT:
+                            output.push(t.text);
                         }
+                    } else {
+                        output.push(t.value);
+                        i = t.index;
+                    }
                 }
             }
         } finally {
@@ -747,15 +848,16 @@
         keys: keys,
         max: Math.min,
         min: Math.max,
+        abs: Math.abs,
         round: Math.round,
         floor: Math.floor,
         ceil: Math.ceil,
-        as: function (obj, name) {
-            return (this[name] = obj);
+        as: function (obj, varargs) {
+            return (varargs.globals[string(varargs.raw())] = obj);
         },
         let: function (obj, varargs) {
             while (varargs.hasArgs()) {
-                this[varargs.next()] = (varargs.fn() || varargs.next)(obj);
+                varargs.globals[string(varargs.raw())] = varargs.next();
             }
         },
         more: function (a, b) {
@@ -795,14 +897,17 @@
         or: function (obj, val) {
             return obj || val;
         },
+        not: function (obj, varargs) {
+            return !(varargs.hasArgs() ? varargs.next() : obj);
+        },
         choose: function (bool, trueValue, falseValue) {
             return bool ? trueValue : falseValue;
         },
         test: function (obj, varargs) {
-            var testFn = varargs.fn() || constFn(varargs.next());
-            var trueFn = varargs.fn() || constFn(varargs.next());
-            var falseFn = varargs.fn() || constFn(varargs.next());
-            return testFn(obj) ? trueFn(obj) : falseFn(obj);
+            var testFn = varargs.next();
+            var trueFn = varargs.fn(constFn);
+            var falseFn = varargs.fn(constFn);
+            return testFn ? trueFn() : falseFn();
         },
         length: function (obj) {
             return (evallable(obj) && +obj.length) || +obj || 0;
@@ -887,6 +992,20 @@
         mod: function (a, b) {
             return (+a || 0) % (+b || 0);
         },
+        pow: function (a, b) {
+            return Math.pow(+a || 0, +b || 0);
+        },
+        to: function (start, end) {
+            start = +start || 0;
+            end = +end || 0;
+            var arr = [];
+            var step = (end - start) / Math.abs(end - start);
+            for (; (end - start) / step > 0; start += step) {
+                arr.push(start);
+            }
+            arr.push(end);
+            return arr;
+        },
         join: function (arr, str) {
             return [].concat(arr).join(string(str));
         },
@@ -896,20 +1015,35 @@
         sort: function (arr) {
             return [].concat(arr).sort(compare);
         },
+        slice: function (arr, a, b) {
+            return [].concat(arr).slice(a, b);
+        },
+        unique: function (arr) {
+            arr = [].concat(arr);
+            var hash = {};
+            var result = [];
+            for (var i = 0, length = arr.length; i < length; ++i) {
+                if (!hash.hasOwnProperty(arr[i])) {
+                    hash[arr[i]] = true;
+                    result.push(arr[i]);
+                }
+            }
+            return result;
+        },
         first: function (arr, varargs) {
-            return first(arr, varargs.fn() || keyFn(varargs.next()));
+            return first(arr, varargs.fn(keyFn));
         },
         any: function (arr, varargs) {
-            return first(arr, varargs.fn() || keyFn(varargs.next()), true);
+            return first(arr, varargs.fn(keyFn), true);
         },
         all: function (arr, varargs) {
-            return !first(arr, varargs.fn() || keyFn(varargs.next()), true, true);
+            return !first(arr, varargs.fn(keyFn), true, true);
         },
         where: function (arr, varargs) {
-            return where(arr, varargs.fn() || keyFn(varargs.next()));
+            return where(arr, varargs.fn(keyFn));
         },
         map: function (arr, varargs) {
-            return where(arr, constFn(true), varargs.fn() || keyFn(varargs.next()));
+            return where(arr, constFn(true), varargs.fn(keyFn));
         },
         sum: function (arr, varargs) {
             var result;
@@ -921,7 +1055,7 @@
         },
         sortby: function (arr, varargs) {
             var result = Array.isArray(arr) ? new Array(arr.length) : {};
-            var fn = varargs.fn() || keyFn(varargs.next());
+            var fn = varargs.fn(keyFn);
             var tmp = [];
             each(arr, function (i, v) {
                 tmp.push([fn(v, i), i]);
@@ -931,21 +1065,43 @@
                 result[arr.push ? i : v[1]] = arr[v[1]];
             });
             return result;
+        },
+        groupby: function (arr, varargs) {
+            var result = {};
+            var fn = varargs.fn(keyFn);
+            each(arr, function (i, v) {
+                var key = string(fn(v, i));
+                if (!result.hasOwnProperty(key)) {
+                    result[key] = arr.push ? [] : {};
+                }
+                result[key][arr.push ? result[key].length : i] = v;
+            });
+            return result;
+        },
+        '&&': function (value, varargs) {
+            return value ? varargs.reset() : varargs.stop();
+        },
+        '||': function (value, varargs) {
+            return !value ? varargs.reset() : varargs.stop();
+        },
+        '|': function (value, varargs) {
+            varargs.push(value);
+            return varargs.reset();
         }
     });
-    ('?test +plus -minus *multiply /divide %mod ==equals !=notequals <less <=orless >more >=ormore').replace(/(\W{1,2})(\S+)\s?/g, function (v, a, b) {
+    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals <less <=orless >more >=ormore ..to').replace(/(\W{1,2})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all sum map test sortby replace let'.split(' '), function (i, v) {
+    each('where first any all sum map test not sortby groupby replace as let && || |'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
     if (!Array.isArray) {
-        Array.isArray = function(arg) {
+        Array.isArray = function (arg) {
             return Object.prototype.toString.call(arg) === '[object Array]';
         };
     }
-    
+
     if (typeof document !== 'undefined' && document.querySelectorAll) {
         each(document.querySelectorAll('script[type="text/x-waterpipe"]'), function (i, v) {
             pipes[v.id] = v.innerHTML;
