@@ -68,7 +68,6 @@
         'null': null,
         '0': 0
     };
-    var RE_NUMBER = /^(NaN|-?(?:(?:\d+|\d*\.\d+)(?:[E|e][+|-]?\d+)?|Infinity))$/;
 
     var evalCount = 0;
     var pipes = Object.create ? Object.create(null) : {};
@@ -78,7 +77,7 @@
         if (CONSTANTS.hasOwnProperty(str)) {
             return CONSTANTS[str];
         }
-        return RE_NUMBER.test(str) ? parseFloat(str) : str;
+        return /^(NaN|-?(?:(?:\d+|\d*\.\d+)(?:[E|e][+|-]?\d+)?|Infinity))$/.test(str) ? parseFloat(str) : str;
     }
 
     function slice() {
