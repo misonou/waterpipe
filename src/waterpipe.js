@@ -47,6 +47,12 @@
     var HTMLOP_ATTR_START = 9;
     var HTMLOP_TEXT = 10;
 
+    var EVAL_STACK = 1;
+    var EVAL_ITER_KEY = 2;
+    var EVAL_ITER_INDEX = 3;
+    var EVAL_ITER_COUNT = 4;
+    var EVAL_GLOBAL = 5;
+
     var TOKEN_IF = 'if';
     var TOKEN_IFNOT = 'if not';
     var TOKEN_ELSE = 'else';
@@ -62,6 +68,7 @@
         'null': null,
         '0': 0
     };
+    var RE_NUMBER = /^(NaN|-?(?:(?:\d+|\d*\.\d+)(?:[E|e][+|-]?\d+)?|Infinity))$/;
 
     var evalCount = 0;
     var pipes = Object.create ? Object.create(null) : {};
@@ -71,8 +78,7 @@
         if (CONSTANTS.hasOwnProperty(str)) {
             return CONSTANTS[str];
         }
-        var double = parseFloat(str);
-        return isNaN(double) ? str : double;
+        return RE_NUMBER.test(str) ? parseFloat(str) : str;
     }
 
     function slice() {
@@ -135,7 +141,36 @@
         while ((m = r.exec(str)) !== null) {
             t.push(m[1] || m[3] ? parseObjectPath(m[3] || m[2]) : m[2]);
         }
-        return t.length ? t : [str];
+        if (!t.length) {
+            t[0] = str;
+        }
+        switch (t[0]) {
+            case '.':
+            case '@0':
+                t.evalMode = EVAL_STACK;
+                break;
+            case '#':
+            case '#key':
+                t.evalMode = EVAL_ITER_KEY;
+                break;
+            case '##':
+            case '#index':
+                t.evalMode = EVAL_ITER_INDEX;
+                break;
+            case '@root':
+                t.evalMode = EVAL_ITER_KEY;
+                t.stackIndex = -1;
+                break;
+            case '@global':
+                t.evalMode = EVAL_GLOBAL;
+                break;
+            default:
+                if (/^@(\d+)$/.test(t[0])) {
+                    t.evalMode = EVAL_STACK;
+                    t.stackIndex = +RegExp.$1;
+                }
+        }
+        return t;
     }
 
     function escape(str) {
@@ -149,23 +184,23 @@
         for (index = re.lastIndex; index < str.length; index++) {
             var escape;
             switch (str.charCodeAt(index)) {
-            case 34: // "
-                escape = '&quot;';
-                break;
-            case 38: // &
-                escape = '&amp;';
-                break;
-            case 39: // '
-                escape = '&#39;';
-                break;
-            case 60: // <
-                escape = '&lt;';
-                break;
-            case 62: // >
-                escape = '&gt;';
-                break;
-            default:
-                continue;
+                case 34: // "
+                    escape = '&quot;';
+                    break;
+                case 38: // &
+                    escape = '&amp;';
+                    break;
+                case 39: // '
+                    escape = '&#39;';
+                    break;
+                case 60: // <
+                    escape = '&lt;';
+                    break;
+                case 62: // >
+                    escape = '&gt;';
+                    break;
+                default:
+                    continue;
             }
             if (lastIndex !== index) {
                 html += str.substring(lastIndex, index);
@@ -370,66 +405,66 @@
                 lastIndex = r.lastIndex;
 
                 switch (m[0].charAt(0)) {
-                case '<':
-                    if (m[1]) {
-                        if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
-                            current.opened = false;
+                    case '<':
+                        if (m[1]) {
+                            if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
+                                current.opened = false;
+                            }
+                        } else {
+                            endTextContent();
+                            htmlStack.unshift({
+                                op: HTMLOP_ELEMENT_START,
+                                tagName: m[2],
+                                offsets: [],
+                                attrs: {}
+                            });
+                            tokens.push(htmlStack[0]);
                         }
-                    } else {
-                        endTextContent();
-                        htmlStack.unshift({
-                            op: HTMLOP_ELEMENT_START,
-                            tagName: m[2],
-                            offsets: [],
-                            attrs: {}
-                        });
-                        tokens.push(htmlStack[0]);
-                    }
-                    break;
-                case '>':
-                case '/':
-                    if (assert(m[0], current && current.tagName)) {
-                        if (current.opened === false || m[0] === '/>') {
+                        break;
+                    case '>':
+                    case '/':
+                        if (assert(m[0], current && current.tagName)) {
+                            if (current.opened === false || m[0] === '/>') {
+                                endTextContent();
+                                tokens.push({
+                                    op: HTMLOP_ELEMENT_END
+                                });
+                                htmlStack.shift();
+                                startTextContent();
+                            } else if (m[0] === '>') {
+                                current.opened = true;
+                                startTextContent();
+                            }
+                        }
+                        break;
+                    case '"':
+                        if (assert(m[0], current && current.attrName)) {
                             endTextContent();
                             tokens.push({
-                                op: HTMLOP_ELEMENT_END
+                                op: HTMLOP_ATTR_END,
+                                attrName: current.attrName
                             });
                             htmlStack.shift();
-                            startTextContent();
-                        } else if (m[0] === '>') {
-                            current.opened = true;
-                            startTextContent();
                         }
-                    }
-                    break;
-                case '"':
-                    if (assert(m[0], current && current.attrName)) {
-                        endTextContent();
-                        tokens.push({
-                            op: HTMLOP_ATTR_END,
-                            attrName: current.attrName
-                        });
-                        htmlStack.shift();
-                    }
-                    break;
-                default:
-                    if (assert(m[0], current)) {
-                        if (m[0].indexOf('=') < 0) {
-                            tokens.push({
-                                op: HTMLOP_ATTR_END,
-                                attrName: m[3]
-                            });
-                        } else {
-                            htmlStack.unshift({
-                                op: HTMLOP_ATTR_START,
-                                attrName: m[3],
-                                offsets: []
-                            });
-                            current.attrs[m[3]] = htmlStack[0];
-                            tokens.push(htmlStack[0]);
-                            startTextContent();
+                        break;
+                    default:
+                        if (assert(m[0], current)) {
+                            if (m[0].indexOf('=') < 0) {
+                                tokens.push({
+                                    op: HTMLOP_ATTR_END,
+                                    attrName: m[3]
+                                });
+                            } else {
+                                htmlStack.unshift({
+                                    op: HTMLOP_ATTR_START,
+                                    attrName: m[3],
+                                    offsets: []
+                                });
+                                current.attrs[m[3]] = htmlStack[0];
+                                tokens.push(htmlStack[0]);
+                                startTextContent();
+                            }
                         }
-                    }
                 }
             }
             if (lastIndex !== str.length) {
@@ -446,77 +481,77 @@
             lastIndex = r.lastIndex;
 
             switch (m[1]) {
-            case '!':
-                break;
-            case '/':
-                assert(controlStack[0] && m[2] === controlStack[0].tokenName);
-                controlStack[0].token.index = tokens.length;
-                if (controlStack[0].tokenIf && !controlStack[0].tokenIf.index) {
-                    controlStack[0].tokenIf.index = tokens.length;
-                }
-                if (m[2] === TOKEN_FOREACH) {
-                    tokens.push({
-                        op: OP_ITER_END,
-                        index: controlStack[0].tokenIndex + 1
+                case '!':
+                    break;
+                case '/':
+                    assert(controlStack[0] && m[2] === controlStack[0].tokenName);
+                    controlStack[0].token.index = tokens.length;
+                    if (controlStack[0].tokenIf && !controlStack[0].tokenIf.index) {
+                        controlStack[0].tokenIf.index = tokens.length;
+                    }
+                    if (m[2] === TOKEN_FOREACH) {
+                        tokens.push({
+                            op: OP_ITER_END,
+                            index: controlStack[0].tokenIndex + 1
+                        });
+                    }
+                    controlStack.shift();
+                    break;
+                case TOKEN_IF:
+                case TOKEN_IFNOT:
+                    controlStack.unshift({
+                        tokenIndex: tokens.length,
+                        tokenName: TOKEN_IF,
+                        token: {
+                            op: OP_TEST,
+                            condition: parsePipe(m[2]),
+                            negate: m[1] === TOKEN_IFNOT
+                        }
                     });
-                }
-                controlStack.shift();
-                break;
-            case TOKEN_IF:
-            case TOKEN_IFNOT:
-                controlStack.unshift({
-                    tokenIndex: tokens.length,
-                    tokenName: TOKEN_IF,
-                    token: {
-                        op: OP_TEST,
-                        condition: parsePipe(m[2]),
-                        negate: m[1] === TOKEN_IFNOT
+                    tokens.push(controlStack[0].token);
+                    break;
+                case TOKEN_ELSE:
+                case TOKEN_ELSEIF:
+                case TOKEN_ELSEIFNOT:
+                    assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
+                    var previousControl = controlStack.splice(0, 1, {
+                        tokenIndex: tokens.length,
+                        tokenName: TOKEN_IF,
+                        token: {
+                            op: OP_JUMP
+                        }
+                    })[0];
+                    (previousControl.tokenIf || previousControl.token).index = tokens.length + 1;
+                    if (previousControl.token.op === OP_JUMP) {
+                        controlStack[0].token = previousControl.token;
                     }
-                });
-                tokens.push(controlStack[0].token);
-                break;
-            case TOKEN_ELSE:
-            case TOKEN_ELSEIF:
-            case TOKEN_ELSEIFNOT:
-                assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
-                var previousControl = controlStack.splice(0, 1, {
-                    tokenIndex: tokens.length,
-                    tokenName: TOKEN_IF,
-                    token: {
-                        op: OP_JUMP
+                    tokens.push(controlStack[0].token);
+                    if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
+                        controlStack[0].tokenIf = {
+                            op: OP_TEST,
+                            condition: parsePipe(m[2]),
+                            negate: m[1] === TOKEN_ELSEIFNOT
+                        };
+                        tokens.push(controlStack[0].tokenIf);
                     }
-                })[0];
-                (previousControl.tokenIf || previousControl.token).index = tokens.length + 1;
-                if (previousControl.token.op === OP_JUMP) {
-                    controlStack[0].token = previousControl.token;
-                }
-                tokens.push(controlStack[0].token);
-                if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
-                    controlStack[0].tokenIf = {
-                        op: OP_TEST,
-                        condition: parsePipe(m[2]),
-                        negate: m[1] === TOKEN_ELSEIFNOT
-                    };
-                    tokens.push(controlStack[0].tokenIf);
-                }
-                break;
-            case TOKEN_FOREACH:
-                controlStack.unshift({
-                    tokenIndex: tokens.length,
-                    tokenName: TOKEN_FOREACH,
-                    token: {
-                        op: OP_ITER,
-                        expression: parsePipe(m[2])
-                    }
-                });
-                tokens.push(controlStack[0].token);
-                break;
-            default:
-                tokens.push({
-                    op: OP_EVAL,
-                    expression: parsePipe(m[2]),
-                    noescape: m[1] === '&'
-                });
+                    break;
+                case TOKEN_FOREACH:
+                    controlStack.unshift({
+                        tokenIndex: tokens.length,
+                        tokenName: TOKEN_FOREACH,
+                        token: {
+                            op: OP_ITER,
+                            expression: parsePipe(m[2])
+                        }
+                    });
+                    tokens.push(controlStack[0].token);
+                    break;
+                default:
+                    tokens.push({
+                        op: OP_EVAL,
+                        expression: parsePipe(m[2]),
+                        noescape: m[1] === '&'
+                    });
             }
         }
         if (lastIndex !== str.length) {
@@ -538,9 +573,6 @@
         }
 
         function objAt(index) {
-            if (index < 0 || index >= objStack.length) {
-                return undefined;
-            }
             return objStack[index] instanceof Iterable ? objStack[index].values[objStack[index].keys[iteratorStack[index]]] : objStack[index];
         }
 
@@ -550,44 +582,37 @@
                 return objAt(0);
             }
             var value;
-            if (typeof objectPath[0] === 'string') {
-                evaluateObjectPath.valid = objectPath[0].length > 2;
-                switch (objectPath[0]) {
-                case '.':
-                    return objAt(0);
-                case '#':
-                case '#key':
+            evaluateObjectPath.valid = objectPath[0].length > 2;
+            switch (objectPath.evalMode) {
+                case EVAL_ITER_KEY:
                     return objStack[0] instanceof Iterable ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
-                case '##':
-                case '#index':
+                case EVAL_ITER_INDEX:
                     return iteratorStack[0];
-                case '#count':
+                case EVAL_ITER_COUNT:
                     return objStack[0] instanceof Iterable ? objStack[0].keys.length : 0;
-                case '@root':
-                    return objAt(objStack.length - 1);
-                default:
-                    if (objectPath[0].charAt(0) === '@') {
-                        value = objAt(parseInt(objectPath[0].slice(1)));
-                    }
-                }
-            }
-
-            var name = Array.isArray(objectPath[0]) ? string(evaluateObjectPath(objectPath[0])) : objectPath[0];
-            for (var j = 0, length = objStack.length; j < length; j++) {
-                value = objAt(j);
-                if (hasProperty(value, name)) {
+                case EVAL_STACK:
+                    value = objAt(objectPath.stackIndex < 0 ? objectPath.stackIndex + objStack.length : objectPath.stackIndex || 0);
                     break;
-                }
+                case EVAL_GLOBAL:
+                    value = options.globals;
+                    break;
+                default:
+                    var name = Array.isArray(objectPath[0]) ? string(evaluateObjectPath(objectPath[0])) : objectPath[0];
+                    for (var j = 0, length = objStack.length; j < length; j++) {
+                        value = objAt(j);
+                        if (hasProperty(value, name)) {
+                            break;
+                        }
+                    }
+                    if (j === objStack.length) {
+                        value = options.globals;
+                        if (!(name in value)) {
+                            evaluateObjectPath.valid = false;
+                            return;
+                        }
+                    }
+                    value = value[name];
             }
-            if (j === objStack.length) {
-                value = options.globals;
-                if (!(name in value)) {
-                    evaluateObjectPath.valid = false;
-                    return;
-                }
-            }
-            value = value[name];
-
             for (var i = 1, len = objectPath.length; i < len && evallable(value); i++) {
                 value = value[Array.isArray(objectPath[i]) ? string(evaluateObjectPath(objectPath[i])) : objectPath[i]];
             }
@@ -682,25 +707,25 @@
                             value = func.call(options.globals, value, varargs);
                         } else {
                             switch (func.length) {
-                            case 1:
-                                value = func.call(options.globals, value);
-                                break;
-                            case 2:
-                                value = func.call(options.globals, value, varargs.next());
-                                break;
-                            case 3:
-                                value = func.call(options.globals, value, varargs.next(), varargs.next());
-                                break;
-                            case 4:
-                                value = func.call(options.globals, value, varargs.next(), varargs.next(), varargs.next());
-                                break;
-                            default:
-                                var args = new Array(func.length);
-                                args[0] = value;
-                                for (var j = 1, len = func.length; j < len; i++) {
-                                    args[j] = varargs.next();
-                                }
-                                value = func.apply(options.globals, args);
+                                case 1:
+                                    value = func.call(options.globals, value);
+                                    break;
+                                case 2:
+                                    value = func.call(options.globals, value, varargs.next());
+                                    break;
+                                case 3:
+                                    value = func.call(options.globals, value, varargs.next(), varargs.next());
+                                    break;
+                                case 4:
+                                    value = func.call(options.globals, value, varargs.next(), varargs.next(), varargs.next());
+                                    break;
+                                default:
+                                    var args = new Array(func.length);
+                                    args[0] = value;
+                                    for (var j = 1, len = func.length; j < len; i++) {
+                                        args[j] = varargs.next();
+                                    }
+                                    value = func.apply(options.globals, args);
                             }
                         }
                     } else if (typeof func === 'string') {
@@ -751,67 +776,66 @@
             });
         }
 
-        options.globals._ = objStack[objStack.length - 1];
         try {
             var i = options.start || 0;
             var e = options.end || tokens.length;
             while (i < e) {
                 var t = tokens[i++];
                 switch (t.op) {
-                case OP_EVAL:
-                    var prevCount = evalCount;
-                    var result = evaluatePipe(t.expression);
-                    if (evallable(result)) {
-                        output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
-                    }
-                    break;
-                case OP_ITER:
-                    objStack.unshift(new Iterable(evaluatePipe(t.expression)));
-                    iteratorStack.unshift(0);
-                    if (!objStack[0].keys.length) {
-                        i = t.index;
-                    }
-                    break;
-                case OP_ITER_END:
-                    if (++iteratorStack[0] >= objStack[0].keys.length) {
-                        objStack.shift();
-                        iteratorStack.shift();
-                    } else {
-                        i = t.index;
-                    }
-                    break;
-                case OP_TEST:
-                    if (!evaluatePipe(t.condition) ^ t.negate) {
-                        i = t.index;
-                    }
-                    break;
-                case OP_JUMP:
-                    i = t.index;
-                    break;
-                default:
-                    if (options.html || options.htmlPartial) {
-                        var currentElm = htmlStack[0];
-                        switch (t.op) {
-                        case HTMLOP_ELEMENT_START:
-                            flushOutput(currentElm);
-                            htmlStack.unshift(document.createElement(t.tagName));
-                            currentElm.appendChild(htmlStack[0]);
-                            createViewFunction(htmlStack[0], t);
-                            break;
-                        case HTMLOP_ELEMENT_END:
-                            flushOutput(currentElm);
-                            htmlStack.shift();
-                            break;
-                        case HTMLOP_ATTR_END:
-                            currentElm.setAttribute(t.attrName, output.splice(0).join(''));
-                            break;
-                        case HTMLOP_TEXT:
-                            output.push(t.text);
+                    case OP_EVAL:
+                        var prevCount = evalCount;
+                        var result = evaluatePipe(t.expression);
+                        if (evallable(result)) {
+                            output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
                         }
-                    } else {
-                        output.push(t.value);
+                        break;
+                    case OP_ITER:
+                        objStack.unshift(new Iterable(evaluatePipe(t.expression)));
+                        iteratorStack.unshift(0);
+                        if (!objStack[0].keys.length) {
+                            i = t.index;
+                        }
+                        break;
+                    case OP_ITER_END:
+                        if (++iteratorStack[0] >= objStack[0].keys.length) {
+                            objStack.shift();
+                            iteratorStack.shift();
+                        } else {
+                            i = t.index;
+                        }
+                        break;
+                    case OP_TEST:
+                        if (!evaluatePipe(t.condition) ^ t.negate) {
+                            i = t.index;
+                        }
+                        break;
+                    case OP_JUMP:
                         i = t.index;
-                    }
+                        break;
+                    default:
+                        if (options.html || options.htmlPartial) {
+                            var currentElm = htmlStack[0];
+                            switch (t.op) {
+                                case HTMLOP_ELEMENT_START:
+                                    flushOutput(currentElm);
+                                    htmlStack.unshift(document.createElement(t.tagName));
+                                    currentElm.appendChild(htmlStack[0]);
+                                    createViewFunction(htmlStack[0], t);
+                                    break;
+                                case HTMLOP_ELEMENT_END:
+                                    flushOutput(currentElm);
+                                    htmlStack.shift();
+                                    break;
+                                case HTMLOP_ATTR_END:
+                                    currentElm.setAttribute(t.attrName, output.splice(0).join(''));
+                                    break;
+                                case HTMLOP_TEXT:
+                                    output.push(t.text);
+                            }
+                        } else {
+                            output.push(t.value);
+                            i = t.index;
+                        }
                 }
             }
         } finally {
@@ -1000,7 +1024,7 @@
             end = +end || 0;
             var arr = [];
             var step = (end - start) / Math.abs(end - start);
-            for (; (end - start) / step > 0; start += step) {
+            for (; step / (end - start) > 0; start += step) {
                 arr.push(start);
             }
             arr.push(end);
