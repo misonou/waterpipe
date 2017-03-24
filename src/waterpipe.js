@@ -25,6 +25,7 @@
  */
 
 (function (root, factory) {
+    /* istanbul ignore next */
     if (typeof define === 'function' && define.amd) {
         define([], factory);
     } else if (typeof module === 'object' && module.exports) {
@@ -98,7 +99,7 @@
     }
 
     function hasProperty(value, name) {
-        if (!evallable(value)) {
+        if (!evallable(value) || typeof value[name] === 'function') {
             return false;
         }
         if (typeof value !== 'object') {
@@ -156,8 +157,12 @@
             case '#index':
                 t.evalMode = EVAL_ITER_INDEX;
                 break;
+            case '#count':
+                t.evalMode = EVAL_ITER_COUNT;
+                break;
+            case '_':
             case '@root':
-                t.evalMode = EVAL_ITER_KEY;
+                t.evalMode = EVAL_STACK;
                 t.stackIndex = -1;
                 break;
             case '@global':
@@ -214,12 +219,16 @@
         var i, len;
         if (obj && 'length' in obj) {
             for (i = 0, len = obj.length; i < len; i++) {
-                callback(i, obj[i]);
+                if (callback(i, obj[i]) === false) {
+                    return;
+                }
             }
         } else if (obj && typeof obj === 'object') {
             var arr = Object.getOwnPropertyNames(obj);
             for (i = 0, len = arr.length; i < len; i++) {
-                callback(arr[i], obj[arr[i]]);
+                if (callback(arr[i], obj[arr[i]]) === false) {
+                    return;
+                }
             }
         }
     }
@@ -406,7 +415,7 @@
                 switch (m[0].charAt(0)) {
                     case '<':
                         if (m[1]) {
-                            if (assert(m[0], current) && current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0]))) {
+                            if (assert(m[0], current) && (current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0])))) {
                                 current.opened = false;
                             }
                         } else {
@@ -575,13 +584,13 @@
             return objStack[index] instanceof Iterable ? objStack[index].values[objStack[index].keys[iteratorStack[index]]] : objStack[index];
         }
 
-        function evaluateObjectPath(objectPath) {
+        function evaluateObjectPath(objectPath, acceptShorthand) {
             if (!objectPath || !objectPath[0]) {
                 evaluateObjectPath.valid = true;
                 return objAt(0);
             }
             var value;
-            evaluateObjectPath.valid = objectPath[0].length > 2;
+            var valid = evaluateObjectPath.valid = acceptShorthand || !objectPath.evalMode || (objectPath[0].length > 1 && objectPath[0] !== '##');
             switch (objectPath.evalMode) {
                 case EVAL_ITER_KEY:
                     return objStack[0] instanceof Iterable ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
@@ -615,7 +624,7 @@
             for (var i = 1, len = objectPath.length; i < len && evallable(value); i++) {
                 value = value[Array.isArray(objectPath[i]) ? string(evaluateObjectPath(objectPath[i])) : objectPath[i]];
             }
-            evaluateObjectPath.valid = true;
+            evaluateObjectPath.valid = valid;
             return typeof value === 'function' ? undefined : value;
         }
 
@@ -644,9 +653,6 @@
                 },
                 reset: function () {
                     resetPos = i;
-                    if (i <= end && pipe[i].textValue === '.') {
-                        return (++i, input);
-                    }
                     return varargs.next();
                 },
                 hasArgs: function () {
@@ -667,7 +673,7 @@
                     if (fn) {
                         return fn(reset ? input : value);
                     }
-                    var v = evaluateObjectPath(pipe[i].objectPath());
+                    var v = evaluateObjectPath(pipe[i].objectPath(), reset);
                     if (pipe[i].canEvaluate || (evaluateObjectPath.valid && (reset || !primitive(value) || primitive(v)))) {
                         return (++i, v);
                     }
@@ -721,7 +727,7 @@
                                 default:
                                     var args = new Array(func.length);
                                     args[0] = value;
-                                    for (var j = 1, len = func.length; j < len; i++) {
+                                    for (var j = 1, len = func.length; j < len; j++) {
                                         args[j] = varargs.next();
                                     }
                                     value = func.apply(options.globals, args);
@@ -1023,7 +1029,7 @@
             end = +end || 0;
             var arr = [];
             var step = (end - start) / Math.abs(end - start);
-            for (; step / (end - start) > 0; start += step) {
+            for (; (end - start) / step > 0; start += step) {
                 arr.push(start);
             }
             arr.push(end);
@@ -1080,12 +1086,13 @@
             var result = Array.isArray(arr) ? new Array(arr.length) : {};
             var fn = varargs.fn(keyFn);
             var tmp = [];
+            var j = 0;
             each(arr, function (i, v) {
-                tmp.push([fn(v, i), i]);
+                tmp.push([fn(v, i), ++j, i]);
             });
             tmp.sort(compare);
             each(tmp, function (i, v) {
-                result[arr.push ? i : v[1]] = arr[v[1]];
+                result[arr.push ? i : v[2]] = arr[v[2]];
             });
             return result;
         },
@@ -1119,17 +1126,19 @@
         pipes[v].varargs = true;
     });
 
+    /* istanbul ignore next */
     if (!Array.isArray) {
         Array.isArray = function (arg) {
             return Object.prototype.toString.call(arg) === '[object Array]';
         };
     }
-
+    /* istanbul ignore next */
     if (typeof document !== 'undefined' && document.querySelectorAll) {
         each(document.querySelectorAll('script[type="text/x-waterpipe"]'), function (i, v) {
             pipes[v.id] = v.innerHTML;
         });
     }
+    /* istanbul ignore next */
     if (typeof module === 'object') {
         waterpipe.with = function () {
             each(slice.apply(null, arguments), function (i, v) {

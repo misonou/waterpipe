@@ -1,0 +1,900 @@
+{
+    "globals": {
+        "myGlobal": "global",
+        "arrOfFib": [1, 1, 2, 3, 5, 8],
+        "arrOfFibObj": [{
+            "value": 1,
+            "even": false
+            }, {
+            "value": 1,
+            "even": false
+            }, {
+            "value": 2,
+            "even": true
+            }, {
+            "value": 3,
+            "even": false
+            }, {
+            "value": 5,
+            "even": false
+            }, {
+            "value": 8,
+            "even": true
+            }],
+        "numbers": {
+            "one": 1,
+            "two": 2,
+            "three": 3,
+            "four": 4,
+            "five": 5
+        }
+    },
+    "pipes": {
+        "myTemplate": "{{.}}",
+        "myTemplateTestStack": "{{@1}}",
+        "myTemplateTestGlobal": "{{customGlobal}}",
+        "myTemplateTestGlobalOverwrite": "{{let customGlobal false}}"
+    },
+    "tests": {
+        "Object path": {
+            "should resolve property": {
+                "input": {
+                    "value": "foobar"
+                },
+                "template": "{{value}}",
+                "expect": "foobar"
+            },
+            "should resolve global variable": {
+                "template": "{{myGlobal}}",
+                "expect": "global"
+            },
+            "should resolve property of descendent object": {
+                "input": {
+                    "obj": {
+                        "value": "foobar"
+                    }
+                },
+                "template": "{{obj.value}}",
+                "expect": "foobar"
+            },
+            "should resolve array element": {
+                "input": {
+                    "array": [1, 2, 3]
+                },
+                "template": "{{array.0}}",
+                "expect": "1"
+            },
+            "should evaluate property name": {
+                "input": {
+                    "obj": {
+                        "prop": "foobar"
+                    },
+                    "key": "prop"
+                },
+                "template": "{{obj.$key}}",
+                "expect": "foobar"
+            },
+            "should evaluate property name in parenthesis": {
+                "input": {
+                    "obj": {
+                        "prop": "foobar"
+                    },
+                    "key": "prop"
+                },
+                "template": "{{obj.$(key)}}",
+                "expect": "foobar"
+            },
+            "should evaluate property name in first segment": {
+                "input": {
+                    "prop": "foobar",
+                    "key": "prop"
+                },
+                "template": "{{$$(key)}}",
+                "expect": "foobar"
+            },
+            "should return nothing on nonexistent path": {
+                "template": "{{arrOfFib.foobar}}",
+                "expect": ""
+            },
+            "should be considered invalid when resolved to function": {
+                "input": "value",
+                "template": "{{toString}}",
+                "expect": ""
+            }
+        },
+        "Statement": {
+            "should support if": {
+                "input": {
+                    "bool": true
+                },
+                "template": "{{if bool}}true{{/if}}",
+                "expect": "true"
+            },
+            "should support if not": {
+                "input": {
+                    "bool": false
+                },
+                "template": "{{if not bool}}false{{/if}}",
+                "expect": "false"
+            },
+            "should support else": {
+                "input": {
+                    "bool": false
+                },
+                "template": "{{if bool}}true{{else}}false{{/if}}",
+                "expect": "false"
+            },
+            "should support elseif": {
+                "input": {
+                    "bool1": false,
+                    "bool2": true
+                },
+                "template": "{{if bool1}}bool1{{elseif bool2}}bool2{{/if}}",
+                "expect": "bool2"
+            },
+            "should support elseif not": {
+                "input": {
+                    "bool1": false,
+                    "bool2": false
+                },
+                "template": "{{if bool1}}bool1{{elseif not bool2}}bool2{{/if}}",
+                "expect": "bool2"
+            },
+            "should support multiple elseif": {
+                "input": {
+                    "bool1": false,
+                    "bool2": true,
+                    "bool3": false
+                },
+                "template": "{{if bool1}}bool1{{elseif bool2}}bool2{{elseif bool3}}bool3{{/if}}",
+                "expect": "bool2"
+            },
+            "should support foreach on array": {
+                "input": [1, 2, 3],
+                "template": "{{foreach}}1{{/foreach}}",
+                "expect": "111"
+            },
+            "should support foreach on object": {
+                "input": {
+                    "prop": "value",
+                    "prop2": "value",
+                    "prop3": "value"
+                },
+                "template": "{{foreach}}1{{/foreach}}",
+                "expect": "111"
+            },
+            "should support foreach on empty": {
+                "template": "{{foreach}}1{{/foreach}}",
+                "expect": ""
+            },
+            "should support comment": {
+                "template": "{{!comment}}",
+                "expect": ""
+            }
+        },
+        "Output": {
+            "should escape HTML entites": {
+                "input": "\"&'<>",
+                "template": "{{.}}",
+                "expect": "&quot;&amp;&#39;&lt;&gt;"
+            },
+            "should suppress entity escape with &": {
+                "input": "\"&'<>",
+                "template": "{{&.}}",
+                "expect": "\"&'<>"
+            },
+            "should output JSON with object": {
+                "input": {
+                    "prop": 1
+                },
+                "template": "{{.}}",
+                "expect": "{&quot;prop&quot;:1}"
+            },
+            "should output empty string with undefined": {
+                "template": "{{.}}",
+                "expect": ""
+            },
+            "should output empty string with null": {
+                "input": null,
+                "template": "{{.}}",
+                "expect": ""
+            }
+        },
+        "Input": {
+            "should accept constant": {
+                "template": "{{\".\"}}",
+                "expect": "."
+            },
+            "should accept forced evaluation": {
+                "input": {
+                    "1": 2
+                },
+                "template": "{{$1}}",
+                "expect": "2"
+            },
+            "should accept function argument": {
+                "template": "{{[ 1 ]}}",
+                "expect": "1"
+            },
+            "invalid path should be tested for pipe function": {
+                "input": 1,
+                "template": "{{+ 1}}",
+                "expect": "2"
+            },
+            "invalid path should return as constant other than string if there is no matched pipe function": {
+                "template": "{{true}}",
+                "expect": "true"
+            },
+            "nonexistent path should not be tested for pipe function": {
+                "input": {
+                    "value": 1
+                },
+                "template": "{{value.foobar + 2}}",
+                "expect": "2"
+            },
+            "nonexistent path should return nothing": {
+                "input": {
+                    "value": 1
+                },
+                "template": "{{value.foobar}}",
+                "expect": ""
+            }
+        },
+        "Argument": {
+            "should be parsed interger": {
+                "template": "{{+ 1}}",
+                "expect": "1"
+            },
+            "should be parsed negative interger": {
+                "template": "{{+ -1}}",
+                "expect": "-1"
+            },
+            "should be parsed double": {
+                "template": "{{+ 3.14}}",
+                "expect": "3.14"
+            },
+            "should be parsed negative double": {
+                "template": "{{+ -3.14}}",
+                "expect": "-3.14"
+            },
+            "should be parsed double in scientific notation": {
+                "template": "{{+ 3.14E+10}}",
+                "expect": "31400000000"
+            },
+            "should be parsed undefined as keyword": {
+                "template": "{{+ undefined}}",
+                "expect": "0"
+            },
+            "should be parsed null as keyword": {
+                "template": "{{+ null}}",
+                "expect": "0"
+            },
+            "should be parsed true as keyword": {
+                "template": "{{+ true}}",
+                "expect": "1"
+            },
+            "should be parsed false as keyword": {
+                "template": "{{+ false}}",
+                "expect": "0"
+            },
+            "should support nested function argument": {
+                "template": "{{[ [ 1 ] ]}}",
+                "expect": "1"
+            },
+            "should be constant for shorthand special variables": {
+                "template": "{{\".\" == .}}",
+                "expect": "true"
+            },
+            "should be parsed in constant mode if evaluated to object but input is primitive": {
+                "input": {
+                    "primitive": "object",
+                    "object": {}
+                },
+                "template": "{{primitive == object}}",
+                "expect": "true"
+            }
+        },
+        "Special variable": {
+            ". should return current object": {
+                "input": "value",
+                "template": "{{.}}",
+                "expect": "value"
+            },
+            "@0 should return current object": {
+                "input": "value",
+                "template": "{{@0}}",
+                "expect": "value"
+            },
+            "@1 should return object of one stack up": {
+                "input": "value",
+                "template": "{{[ @1 == @0 ]}}",
+                "expect": "true"
+            },
+            "_ should return input object": {
+                "input": "value",
+                "template": "{{_}}",
+                "expect": "value"
+            },
+            "@root should return input object": {
+                "input": "value",
+                "template": "{{@root}}",
+                "expect": "value"
+            },
+            "@global should return global object": {
+                "globals": {
+                    "a": 1
+                },
+                "template": "{{@global}}",
+                "expect": "{&quot;a&quot;:1}"
+            },
+            "# should return current key of iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{foreach}}{{#}}{{/foreach}}",
+                "expect": "p1p2"
+            },
+            "#key should return current key of iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{foreach}}{{#key}}{{/foreach}}",
+                "expect": "p1p2"
+            },
+            "#key should return undefined in context other than iteration": {
+                "template": "{{#key}}",
+                "expect": ""
+            },
+            "## should return current index of iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{foreach}}{{##}}{{/foreach}}",
+                "expect": "01"
+            },
+            "#index should return current index of iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{foreach}}{{#index}}{{/foreach}}",
+                "expect": "01"
+            },
+            "#index should return undefined in context other than iteration": {
+                "template": "{{#index}}",
+                "expect": ""
+            },
+            "#count should return count of iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{foreach}}{{#count}}{{/foreach}}",
+                "expect": "22"
+            },
+            "#count should return 0 in context other than iteration": {
+                "template": "{{#count}}",
+                "expect": "0"
+            }
+        },
+        "Pipe function": {
+            "should receive 1 argument": {
+                "template": "{{let result [ fn1 ]}}{{result}}",
+                "expect": "1"
+            },
+            "should receive 2 arguments": {
+                "template": "{{let result [ fn2 ]}}{{result}}",
+                "expect": "2"
+            },
+            "should receive 3 arguments": {
+                "template": "{{let result [ fn3 ]}}{{result}}",
+                "expect": "3"
+            },
+            "should receive 4 arguments": {
+                "template": "{{let result [ fn4 ]}}{{result}}",
+                "expect": "4"
+            },
+            "should receive 5 arguments": {
+                "template": "{{let result [ fn5 ]}}{{result}}",
+                "expect": "5"
+            }
+        },
+        "Template inclusion": {
+            "should work like pipe function and return string": {
+                "template": "{{arrOfFib myTemplate length}}",
+                "expect": "13"
+            },
+            "should have new object stack": {
+                "input": "foobar",
+                "template": "{{myTemplateTestStack}}",
+                "expect": ""
+            },
+            "should read outer global variables": {
+                "template": "{{let customGlobal true}}{{myTemplateTestGlobal}}",
+                "expect": "true"
+            },
+            "should not overwrite outer global variables": {
+                "template": "{{let customGlobal true}}{{myTemplateTestGlobalOverwrite}}{{customGlobal}}",
+                "expect": "true"
+            }
+        },
+        "Control functions": {
+            "| should concatenate arrays": {
+                "input": {
+                    "a": [1, 2, 3],
+                    "b": [4, 5, 6]
+                },
+                "template": "{{a | b}}",
+                "expect": "[1,2,3,4,5,6]"
+            },
+            "| should flatten arrays": {
+                "input": {
+                    "a": [1, 2, 3],
+                    "b": [[4, 5, 6], [7, 8, 9]]
+                },
+                "template": "{{a | b}}",
+                "expect": "[1,2,3,4,5,6,7,8,9]"
+            },
+            "| should concatenate scalar values to array": {
+                "template": "{{1 | 2}}",
+                "expect": "[1,2]"
+            },
+            "| should skip undefined and null values": {
+                "input": [null, [1, 2, null, 3]],
+                "template": "{{undefined | .}}",
+                "expect": "[1,2,3]"
+            },
+            "&& should perform logical AND operation": {
+                "template": "{{true && true}}:{{true && false}}:{{false && true}}:{{false && false}}",
+                "expect": "true:false:false:false"
+            },
+            "&& should be short-circuited if the input is false": {
+                "input": {
+                    "a": false,
+                    "b": true
+                },
+                "template": "{{a && b as _tmp}}:{{_tmp}}",
+                "expect": "false:"
+            },
+            "|| should perform logical OR operation": {
+                "template": "{{true || true}}:{{true || false}}:{{false || true}}:{{false || false}}",
+                "expect": "true:true:true:false"
+            },
+            "|| should be short-circuited if the input is true": {
+                "input": {
+                    "a": true,
+                    "b": true
+                },
+                "template": "{{a || b as _tmp}}:{{_tmp}}",
+                "expect": "true:"
+            }
+        },
+        "Variable functions": {
+            "let": {
+                "template": "{{let _tmp 1}}:{{_tmp}}",
+                "expect": ":1"
+            },
+            "as": {
+                "template": "{{1 as _tmp}}:{{_tmp}}",
+                "expect": "1:1"
+            }
+        },
+        "Comparison functions": {
+            "equals": {
+                "input": {
+                    "a": 1,
+                    "b": 2
+                },
+                "template": "{{a == b}}",
+                "expect": "false"
+            },
+            "equals of arrays": {
+                "template": "{{arrOfFib == arrOfFib}}",
+                "expect": "true"
+            },
+            "notequals": {
+                "input": {
+                    "a": 1,
+                    "b": 2
+                },
+                "template": "{{a != b}}",
+                "expect": "true"
+            },
+            "less": {
+                "input": {
+                    "a": 1,
+                    "b": 2
+                },
+                "template": "{{a > b}}",
+                "expect": "false"
+            },
+            "orless": {
+                "input": {
+                    "a": 1,
+                    "b": 2
+                },
+                "template": "{{a < b}}",
+                "expect": "true"
+            },
+            "more": {
+                "input": {
+                    "a": 1,
+                    "b": 2
+                },
+                "template": "{{a >= b}}",
+                "expect": "false"
+            },
+            "ormore": {
+                "input": {
+                    "a": 1,
+                    "b": 2
+                },
+                "template": "{{a <= b}}",
+                "expect": "true"
+            },
+            "between": {
+                "input": {
+                    "a": 1
+                },
+                "template": "{{a between 0 100}}",
+                "expect": "true"
+            },
+            "contains": {
+                "input": {},
+                "template": "{{\"foobar\" contains foo}}",
+                "expect": "true"
+            },
+            "like": {
+                "input": {},
+                "template": "{{\"foobar\" like /^foo/}}",
+                "expect": "true"
+            },
+            "even": {
+                "input": {},
+                "template": "{{2 even}}",
+                "expect": "true"
+            },
+            "odd": {
+                "input": {},
+                "template": "{{1 odd}}",
+                "expect": "true"
+            }
+        },
+        "Conditional functions": {
+            "or": {
+                "input": false,
+                "template": "{{or default}}",
+                "expect": "default"
+            },
+            "choose": {
+                "template": "{{true choose yes no}}:{{false choose yes no}}",
+                "expect": "yes:no"
+            },
+            "test": {
+                "template": "{{? true yes no}}:{{? false yes no}}",
+                "expect": "yes:no"
+            },
+            "not": {
+                "template": "{{false not}}:{{not true}}",
+                "expect": "true:false"
+            }
+        },
+        "String functions": {
+            "concat": {
+                "template": "{{\"foo\" concat bar}}",
+                "expect": "foobar"
+            },
+            "replace": {
+                "template": "{{\"foo\" replace foo bar}}",
+                "expect": "bar"
+            },
+            "replace regex fn": {
+                "template": "{{\"foo\" replace /^\\\\w/ [ $0 upper ]}}",
+                "expect": "Foo"
+            },
+            "substr": {
+                "template": "{{\"foo\" substr 0 2}}",
+                "expect": "fo"
+            },
+            "trim": {
+                "template": "{{\" foo \" trim}}",
+                "expect": "foo"
+            },
+            "trimstart": {
+                "template": "{{\" foo \" trimstart}}",
+                "expect": "foo "
+            },
+            "trimend": {
+                "template": "{{\" foo \" trimend}}",
+                "expect": " foo"
+            },
+            "padstart": {
+                "template": "{{\"foo\" padstart /}}:{{\"/foo\" padstart /}}",
+                "expect": "/foo:/foo"
+            },
+            "padend": {
+                "template": "{{\"foo\" padend /}}:{{\"foo/\" padend /}}",
+                "expect": "foo/:foo/"
+            },
+            "removestart": {
+                "template": "{{\"/foo/\" removestart /}}:{{\"foo/\" removestart /}}",
+                "expect": "foo/:foo/"
+            },
+            "removeend": {
+                "template": "{{\"/foo/\" removeend /}}:{{\"/foo\" removeend /}}",
+                "expect": "/foo:/foo"
+            },
+            "cutbefore": {
+                "template": "{{\"a.b.c\" cutbefore .}}:{{\"foo\" cutbefore .}}",
+                "expect": "a:foo"
+            },
+            "cutbeforelast": {
+                "template": "{{\"a.b.c\" cutbeforelast .}}:{{\"foo\" cutbeforelast .}}",
+                "expect": "a.b:foo"
+            },
+            "cutafter": {
+                "template": "{{\"a.b.c\" cutafter .}}:{{\"foo\" cutafter .}}",
+                "expect": "b.c:foo"
+            },
+            "cutafterlast": {
+                "template": "{{\"a.b.c\" cutafterlast .}}:{{\"foo\" cutafterlast .}}",
+                "expect": "c:foo"
+            },
+            "split": {
+                "template": "{{\"a.b.c.\" split .}}",
+                "expect": "[&quot;a&quot;,&quot;b&quot;,&quot;c&quot;]"
+            },
+            "repeat": {
+                "template": "{{2 repeat foo}}:{{repeat foo}}",
+                "expect": "foofoo:"
+            },
+            "upper": {
+                "template": "{{\"foo\" upper}}",
+                "expect": "FOO"
+            },
+            "lower": {
+                "template": "{{\"FOO\" lower}}",
+                "expect": "foo"
+            },
+            "ucfirst": {
+                "template": "{{\"foo\" ucfirst}}",
+                "expect": "Foo"
+            }
+        },
+        "Math functions": {
+            "max": {
+                "template": "{{10 max 1}}",
+                "expect": "1"
+            },
+            "min": {
+                "template": "{{10 min 100}}",
+                "expect": "100"
+            },
+            "round": {
+                "template": "{{3.14 round}}",
+                "expect": "3"
+            },
+            "floor": {
+                "template": "{{3.14 floor}}",
+                "expect": "3"
+            },
+            "ceil": {
+                "template": "{{3.14 ceil}}",
+                "expect": "4"
+            },
+            "abs": {
+                "template": "{{-3.14 abs}}",
+                "expect": "3.14"
+            },
+            "plus": {
+                "template": "{{10 + 2}}:{{+}}",
+                "expect": "12:0"
+            },
+            "minus": {
+                "template": "{{10 - 2}}:{{-}}",
+                "expect": "8:0"
+            },
+            "multiply": {
+                "template": "{{10 * 2}}:{{*}}",
+                "expect": "20:0"
+            },
+            "divide": {
+                "template": "{{10 / 2}}:{{null /}}",
+                "expect": "5:"
+            },
+            "mod": {
+                "template": "{{10 % 2}}:{{%}}",
+                "expect": "0:"
+            },
+            "pow": {
+                "template": "{{10 ^ 2}}:{{^}}",
+                "expect": "100:1"
+            }
+        },
+        "Iterable functions": {
+            "to": {
+                "template": "{{0 .. 3}}",
+                "expect": "[0,1,2,3]"
+            },
+            "to reversed": {
+                "template": "{{3 .. 0}}",
+                "expect": "[3,2,1,0]"
+            },
+            "join": {
+                "template": "{{arrOfFib join ,}}",
+                "expect": "1,1,2,3,5,8"
+            },
+            "keys": {
+                "template": "{{arrOfFib keys}}",
+                "expect": "[0,1,2,3,4,5]"
+            },
+            "keys of object": {
+                "template": "{{numbers keys}}",
+                "expect": "[&quot;one&quot;,&quot;two&quot;,&quot;three&quot;,&quot;four&quot;,&quot;five&quot;]"
+            },
+            "map": {
+                "template": "{{arrOfFib map [ % 2 ]}}",
+                "expect": "[1,1,0,1,1,0]"
+            },
+            "where fn": {
+                "template": "{{arrOfFib where [ even ]}}",
+                "expect": "[2,8]"
+            },
+            "where key": {
+                "template": "{{arrOfFibObj where even}}",
+                "expect": "[{&quot;value&quot;:2,&quot;even&quot;:true},{&quot;value&quot;:8,&quot;even&quot;:true}]"
+            },
+            "where of object": {
+                "template": "{{numbers where [ even ]}}",
+                "expect": "{&quot;two&quot;:2,&quot;four&quot;:4}"
+            },
+            "first fn": {
+                "template": "{{arrOfFib first [ even ]}}",
+                "expect": "2"
+            },
+            "first key": {
+                "template": "{{arrOfFibObj first even}}",
+                "expect": "{&quot;value&quot;:2,&quot;even&quot;:true}"
+            },
+            "first of object": {
+                "template": "{{numbers first [ even ]}}",
+                "expect": "2"
+            },
+            "any fn": {
+                "template": "{{arrOfFib any [ even ]}}",
+                "expect": "true"
+            },
+            "any key": {
+                "template": "{{arrOfFibObj any even}}",
+                "expect": "true"
+            },
+            "any of object": {
+                "template": "{{numbers any [ even ]}}",
+                "expect": "true"
+            },
+            "all fn": {
+                "template": "{{arrOfFib all [ even ]}}",
+                "expect": "false"
+            },
+            "all key": {
+                "template": "{{arrOfFibObj all even}}",
+                "expect": "false"
+            },
+            "all of object": {
+                "template": "{{numbers all [ even ]}}",
+                "expect": "false"
+            },
+            "sum": {
+                "template": "{{arrOfFib sum}}",
+                "expect": "20"
+            },
+            "sum seed": {
+                "template": "{{arrOfFib sum 1}}",
+                "expect": "21"
+            },
+            "sum fn": {
+                "template": "{{arrOfFib sum [ * 10 ]}}",
+                "expect": "200"
+            },
+            "sum seed fn": {
+                "template": "{{arrOfFib sum 1 [ * 10 ]}}",
+                "expect": "201"
+            },
+            "sum seed key": {
+                "template": "{{arrOfFibObj sum 1 value}}",
+                "expect": "21"
+            },
+            "slice": {
+                "template": "{{arrOfFib slice 0 2}}",
+                "expect": "[1,1]"
+            },
+            "unique": {
+                "template": "{{arrOfFib unique}}",
+                "expect": "[1,2,3,5,8]"
+            },
+            "sort": {
+                "template": "{{arrOfFib sort}}",
+                "expect": "[1,1,2,3,5,8]"
+            },
+            "sortby fn": {
+                "template": "{{arrOfFib sortby [ even ]}}",
+                "expect": "[1,1,3,5,2,8]"
+            },
+            "sortby key": {
+                "template": "{{arrOfFibObj sortby even}}",
+                "expect": "[{&quot;value&quot;:1,&quot;even&quot;:false},{&quot;value&quot;:1,&quot;even&quot;:false},{&quot;value&quot;:3,&quot;even&quot;:false},{&quot;value&quot;:5,&quot;even&quot;:false},{&quot;value&quot;:2,&quot;even&quot;:true},{&quot;value&quot;:8,&quot;even&quot;:true}]"
+            },
+            "sortby of object": {
+                "template": "{{numbers sortby [ even ]}}",
+                "expect": "{&quot;one&quot;:1,&quot;three&quot;:3,&quot;five&quot;:5,&quot;two&quot;:2,&quot;four&quot;:4}"
+            },
+            "groupby fn": {
+                "template": "{{arrOfFib groupby [ even ]}}",
+                "expect": "{&quot;false&quot;:[1,1,3,5],&quot;true&quot;:[2,8]}"
+            },
+            "groupby key": {
+                "template": "{{arrOfFibObj groupby even}}",
+                "expect": "{&quot;false&quot;:[{&quot;value&quot;:1,&quot;even&quot;:false},{&quot;value&quot;:1,&quot;even&quot;:false},{&quot;value&quot;:3,&quot;even&quot;:false},{&quot;value&quot;:5,&quot;even&quot;:false}],&quot;true&quot;:[{&quot;value&quot;:2,&quot;even&quot;:true},{&quot;value&quot;:8,&quot;even&quot;:true}]}"
+            },
+            "groupby of object": {
+                "template": "{{numbers groupby [ even ]}}",
+                "expect": "{&quot;false&quot;:{&quot;one&quot;:1,&quot;three&quot;:3,&quot;five&quot;:5},&quot;true&quot;:{&quot;two&quot;:2,&quot;four&quot;:4}}"
+            },
+            "reverse": {
+                "template": "{{arrOfFib reverse}}",
+                "expect": "[8,5,3,2,1,1]"
+            },
+            "length": {
+                "template": "{{length}}:{{\"foo\" length}}:{{arrOfFib length}}",
+                "expect": "0:3:6"
+            }
+        },
+        "Formatting functions": {
+            ":printf": {
+                "template": "{{3.14 :printf %d}}",
+                "expect": "3"
+            },
+            ":query": {
+                "input": {
+                    "p1": "value1",
+                    "p2": "value2"
+                },
+                "template": "{{&:query}}",
+                "expect": "p1=value1&p2=value2"
+            },
+            ":date": {
+                "template": "{{0 :date \"yyyy/MM/dd HH:mm:ss.ffffffzzz hhtt g yy MMM MMMM ddd dddd\"}}",
+                "expect": "1970/01/01 08:00:00.000000+08:00 08AM A.D. 70 Jan January Thu Thursday"
+            }
+        },
+        "waterpipe()": {
+            "should return empty string for empty template": {
+                "expect": ""
+            },
+            "should return exact string if there is no pipe": {
+                "template": "foobar",
+                "expect": "foobar"
+            },
+            "should parse HTML": {
+                "template": "<a download href=\"{{myGlobal}}\"><img src=\"\"><br/></a>",
+                "expect": "<a download href=\"global\"><img src=\"\"><br/></a>"
+            },
+            "should tolerate mismatched tag": {
+                "template": "</b>",
+                "expect": "</b>"
+            },
+            "should throw error on mismatched template statement": {
+                "template": "{{foreach}}{{/if}}",
+                "exception": true
+            },
+            "should warn invalid pipe function and return nothing": {
+                "template": "{{myGlobal noThisPipe}}",
+                "expect": "",
+                "warn": true
+            }
+        }
+    }
+}

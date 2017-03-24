@@ -25,6 +25,7 @@
  */
 
 (function (root, factory) {
+    /* istanbul ignore next */
     if (typeof define === 'function' && define.amd) {
         define(['waterpipe'], factory);
     } else if (typeof module === 'object' && module.exports) {
@@ -62,6 +63,7 @@
     internals = {};
 
     /*! jquery.js | Copyright jQuery Foundation and other contributors | Released under the MIT license */
+    /* istanbul ignore next */
     (function (exports) {
         exports.buildParams = function (arr, obj, prefix) {
             if (prefix && Array.isArray(obj)) {
@@ -84,6 +86,7 @@
     }(internals));
 
     /*! sprintf.js | Copyright (c) 2007-2013 Alexandru Marasteanu <hello at alexei dot ro> | 3 clause BSD license */
+    /* istanbul ignore next */
     (function (e) {
         function r(e) {
             return Object.prototype.toString.call(e).slice(8, -1).toLowerCase()
