@@ -228,7 +228,8 @@
         };
 
         function padZero(num, len) {
-            return (new Array(len + 1).join('0') + num).substr(-len);
+            num = String(num);
+            return num.length >= len ? num : (new Array(len + 1).join('0') + num).substr(-len);
         }
 
         function formatDate(date, format, translationsOverride) {
