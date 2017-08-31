@@ -1,5 +1,5 @@
 /*!
- * Waterpipe JavaScript Template v2.0.0
+ * Waterpipe JavaScript Template v2.1.0-beta
  *
  * The MIT License (MIT)
  *
@@ -72,7 +72,11 @@
 
     var evalCount = 0;
     var pipes = Object.create ? Object.create(null) : {};
-    var cache = {};
+
+    function cached(fn, str) {
+        var cache = fn.cache = fn.cache || {};
+        return cache.hasOwnProperty(str) ? cache[str] : (cache[str] = fn(str));
+    }
 
     function typeValue(str) {
         if (CONSTANTS.hasOwnProperty(str)) {
@@ -90,6 +94,18 @@
         return arr;
     }
 
+    function isFunction(value) {
+        return typeof value === 'function';
+    }
+
+    function isString(value) {
+        return typeof value === 'string';
+    }
+
+    function isObject(value) {
+        return typeof value === 'object';
+    }
+
     function evallable(value) {
         return value !== undefined && value !== null;
     }
@@ -99,10 +115,10 @@
     }
 
     function hasProperty(value, name) {
-        if (!evallable(value) || typeof value[name] === 'function') {
+        if (!evallable(value) || isFunction(value[name])) {
             return false;
         }
-        if (typeof value !== 'object') {
+        if (!isObject(value)) {
             return value[name] !== undefined;
         }
         return value.hasOwnProperty(name) || (Array.isArray(value) && /^\d+$/.test(name));
@@ -127,19 +143,45 @@
         return constFn();
     }
 
+    function detectKeyFn(varargs, arr) {
+        function isValidKey(key) {
+            return first(arr, function (v) {
+                return hasProperty(v, key);
+            }, true);
+        }
+        switch (varargs.state()) {
+            case 'func':
+                return varargs.fn();
+            case 'auto':
+                var key = varargs.raw();
+                var value = varargs.eval(key);
+                if (isString(value) && isValidKey(value)) {
+                    return cached(keyFn, value);
+                }
+                var fn = pipes[key];
+                if (fn && !fn.varargs && !isValidKey(key)) {
+                    return isFunction(fn) ? fn : function (v) {
+                        return run(fn, v);
+                    };
+                }
+                return cached(keyFn, key);
+        }
+        return cached(keyFn, string(varargs.next()));
+    }
+
     function string(value, stringify) {
-        return !evallable(value) || value !== value || typeof value === 'function' ? '' : typeof value === 'string' ? value : (stringify || String)(value);
+        return !evallable(value) || value !== value || isFunction(value) ? '' : isString(value) ? value : (stringify || String)(value);
     }
 
     function parseRegExp(str) {
-        return str.charAt(0) === '/' && (parseRegExp[str] || (parseRegExp[str] = /\/((?![*+?])(?:[^\r\n\[/\\]|\\.|\[(?:[^\r\n\]\\]|\\.)*\])+)\/((?:g(?:im?|mi?)?|i(?:gm?|mg?)?|m(?:gi?|ig?)?)?)/g.test(str) && new RegExp(RegExp.$1, RegExp.$2)));
+        return str.charAt(0) === '/' && /\/((?![*+?])(?:[^\r\n\[/\\]|\\.|\[(?:[^\r\n\]\\]|\\.)*\])+)\/((?:g(?:im?|mi?)?|i(?:gm?|mg?)?|m(?:gi?|ig?)?)?)/g.test(str) && new RegExp(RegExp.$1, RegExp.$2);
     }
 
     function parseObjectPath(str) {
         var t = [];
         var m, r = /((?!^)\$)?([^$.()][^.]*)|\$\(([^)]+)\)/ig;
         while ((m = r.exec(str)) !== null) {
-            t.push(m[1] || m[3] ? parseObjectPath(m[3] || m[2]) : m[2]);
+            t.push(m[1] || m[3] ? cached(parseObjectPath, m[3] || m[2]) : m[2]);
         }
         if (!t.length) {
             t[0] = str;
@@ -215,6 +257,12 @@
         return lastIndex !== index ? html + str.substring(lastIndex, index) : html;
     }
 
+    function hyphenate(str) {
+        return string(str).replace(/[A-Z](?:[A-Z]+(?=$|[A-Z]))?/g, function (v, i) {
+            return (i > 0 ? '-' : '') + v.toLowerCase();
+        });
+    }
+
     function each(obj, callback) {
         var i, len;
         if (obj && 'length' in obj) {
@@ -223,7 +271,7 @@
                     return;
                 }
             }
-        } else if (obj && typeof obj === 'object') {
+        } else if (obj && isObject(obj)) {
             var arr = Object.getOwnPropertyNames(obj);
             for (i = 0, len = arr.length; i < len; i++) {
                 if (callback(arr[i], obj[arr[i]]) === false) {
@@ -309,7 +357,7 @@
         var arr = str.substr(0, cstart || start).split('\n').reverse();
         var lineStart = str.substring(str.lastIndexOf('\n', start) + 1, start).replace(/^\s+/, '').substr(-20);
         var line = str.substring(start, str.indexOf('\n', end) + 1 || str.length).replace(/\r?\n|\s+$/g, '').substr(0, end - start + 20);
-        return waterpipe(' at line {{$0}} column {{$1}}:\n\t{{&$2}}{{&$3}}\n\t{{$2.length + $4 repeat \\ }}{{$5 repeat ^}}', [arr.length, arr[0].length + 1, lineStart, line, cstart - start || 0, cend - cstart || end - start]);
+        return waterpipe('at line {{$0}} column {{$1}}:{{$6}}{{&$2}}{{&$3}}{{$6}}{{$2.length + $4 repeat \\ }}{{$5 repeat ^}}', [arr.length, arr[0].length + 1, lineStart, line, cstart - start || 0, cend - cstart || end - start, '\n\t']);
     }
 
     function strargs(fn) {
@@ -318,65 +366,66 @@
         };
     }
 
+    function Pipe(str, index) {
+        this.value = str;
+        this.index = index;
+    }
+    Pipe.prototype = [];
+
+    function PipeArgument(prev, str, start, end, canEvaluate) {
+        var self = this;
+        self.textValue = str;
+        self.value = typeValue(str);
+        self.canEvaluate = self.value === self.textValue && canEvaluate;
+        self.start = start;
+        self.end = end;
+        if (prev) {
+            prev.next = self;
+        }
+    }
+    PipeArgument.prototype.objectPath = function () {
+        return (this.objectPath = constFn(cached(parseObjectPath, this.textValue.replace(/^\$/, '')))).call();
+    };
+    PipeArgument.prototype.length = function () {
+        if (this.value === '[' && this.canEvaluate === undefined) {
+            for (var t = this.next, i = 1, count = 1; t; t = t.next, i++) {
+                if (t.value === '[') {
+                    count++;
+                } else if (t.value === ']' && --count === 0) {
+                    return (this.length = constFn(i)).call();
+                }
+            }
+        }
+        this.length = function () {};
+    };
+
     function parse(str) {
         var tokens = [];
-        var controlStack = [];
+        var controlStack = [{}];
         var htmlStack = [];
         var lastIndex = 0;
         var m, r = /\{\{([\/!]|foreach(?=\s|\})|if(?:\snot)?(?=\s)|else(?:if(?:\snot)?(?=\s))?|&?(?!\}))\s*((?:\}(?!\})|[^}])*)\}\}/g;
 
-        function Pipe(str) {
-            this.value = str;
-            this.index = m.index + m[0].indexOf(str);
-        }
-        Pipe.prototype = [];
-
-        function PipeArgument(prev, str, start, end, canEvaluate) {
-            var self = this;
-            self.textValue = str;
-            self.value = typeValue(str);
-            self.canEvaluate = self.value === self.textValue && canEvaluate;
-            self.start = start;
-            self.end = end;
-            if (prev) {
-                prev.next = self;
-            }
-        }
-        PipeArgument.prototype.objectPath = function () {
-            return (this.objectPath = constFn(parseObjectPath(this.textValue.replace(/^\$/, '')))).call();
-        };
-        PipeArgument.prototype.length = function () {
-            if (this.value === '[' && this.canEvaluate === undefined) {
-                for (var t = this.next, i = 1, count = 1; t; t = t.next, i++) {
-                    if (t.value === '[') {
-                        count++;
-                    } else if (t.value === ']' && --count === 0) {
-                        return (this.length = constFn(i)).call();
-                    }
-                }
-            }
-            this.length = function () {};
-        };
-
         function assert(result) {
             if (!result) {
-                throw new Error('Unexpected ' + m[0] + formatCallSite(str, m.index, r.lastIndex));
+                throw new Error('Unexpected ' + m[0] + ' ' + formatCallSite(str, m.index, r.lastIndex));
             }
         }
 
         function parsePipe(str) {
-            var t = new Pipe(str);
-            var m, r = /([^\s\\"]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"/ig;
-            while ((m = r.exec(str)) !== null) {
-                t.unshift(new PipeArgument(t[0], (m[2] !== undefined ? m[2] : m[0]).replace(/\\(.)/g, '$1'), t.index + m.index, t.index + r.lastIndex, m[2] !== undefined ? false : m[1] === '$' ? true : undefined));
+            var t = new Pipe(str, m.index + m[0].indexOf(str));
+            var n, r = /([^\s\\"]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"/ig;
+            while ((n = r.exec(str)) !== null) {
+                t.unshift(new PipeArgument(t[0], (n[2] !== undefined ? n[2] : n[0]).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
             }
             return t.reverse();
         }
 
         function parseOut(str) {
             var start = tokens.length;
-            var m, r = /<(\/?)([^\s>\/]+)|\/?>|(\w+)(?:(?=[\s>\/])|=")|"/ig;
+            var m, r = /<(\/?)([^\s>\/]+)|\/?>|([^\s=\/<>"]+)(?:(?=[\s\/<>])|=")|"/ig;
             var lastIndex = 0;
+            var normalized = '';
 
             function startTextContent() {
                 if (htmlStack[0]) {
@@ -395,31 +444,49 @@
                 }
             }
 
-            function assert(str, condition) {
-                if (!condition && (!current || current.attrName || current.opened)) {
+            function insertWS() {
+                var last = tokens[tokens.length - 1];
+                return last && (last.op === HTMLOP_TEXT || last.op === HTMLOP_ATTR_START || last.op === OP_EVAL) && last.cindex === controlStack[0].tokenIndex ? ' ' : '';
+            }
+
+            function stripWS() {
+                if (!insertWS() && tokens.length && tokens[tokens.length - 1].text === ' ') {
+                    normalized = normalized.slice(0, -1);
+                    tokens.pop();
+                }
+            }
+
+            function writeText(str) {
+                str = str.replace(/^\s+|\s+$/g, '') || insertWS();
+                if (str) {
+                    normalized += str;
                     tokens.push({
                         op: HTMLOP_TEXT,
+                        cindex: controlStack[0].tokenIndex,
                         text: str
                     });
                 }
-                return condition;
             }
 
             while ((m = r.exec(str)) !== null) {
                 var current = htmlStack[0];
                 if (lastIndex !== m.index) {
-                    assert(str.substring(lastIndex, m.index));
+                    writeText(str.substring(lastIndex, m.index));
                 }
                 lastIndex = r.lastIndex;
 
                 switch (m[0].charAt(0)) {
                     case '<':
-                        if (m[1]) {
-                            if (assert(m[0], current) && (current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && assert(m[0], current = htmlStack[0])))) {
+                        if (current && m[1]) {
+                            if (current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && (current = htmlStack[0]))) {
                                 current.opened = false;
+                                stripWS();
+                                normalized += m[0];
+                                continue;
                             }
                         } else {
                             endTextContent();
+                            stripWS();
                             htmlStack.unshift({
                                 op: HTMLOP_ELEMENT_START,
                                 tagName: m[2],
@@ -427,11 +494,13 @@
                                 attrs: {}
                             });
                             tokens.push(htmlStack[0]);
+                            normalized += m[0];
+                            continue;
                         }
                         break;
                     case '>':
                     case '/':
-                        if (assert(m[0], current && current.tagName)) {
+                        if (current && current.tagName) {
                             if (current.opened === false || m[0] === '/>') {
                                 endTextContent();
                                 tokens.push({
@@ -443,20 +512,24 @@
                                 current.opened = true;
                                 startTextContent();
                             }
+                            normalized += m[0];
+                            continue;
                         }
                         break;
                     case '"':
-                        if (assert(m[0], current && current.attrName)) {
+                        if (current && current.attrName) {
                             endTextContent();
                             tokens.push({
                                 op: HTMLOP_ATTR_END,
                                 attrName: current.attrName
                             });
                             htmlStack.shift();
+                            normalized += m[0];
+                            continue;
                         }
                         break;
                     default:
-                        if (assert(m[0], current)) {
+                        if (current && current.tagName && !current.opened) {
                             if (m[0].indexOf('=') < 0) {
                                 tokens.push({
                                     op: HTMLOP_ATTR_END,
@@ -465,6 +538,7 @@
                             } else {
                                 htmlStack.unshift({
                                     op: HTMLOP_ATTR_START,
+                                    cindex: controlStack[0].tokenIndex,
                                     attrName: m[3],
                                     offsets: []
                                 });
@@ -472,14 +546,22 @@
                                 tokens.push(htmlStack[0]);
                                 startTextContent();
                             }
+                            normalized += ' ' + m[0];
+                            continue;
                         }
+                }
+                if (!current || current.attrName || current.opened) {
+                    writeText(m[0]);
                 }
             }
             if (lastIndex !== str.length) {
-                assert(str.substr(lastIndex));
+                writeText(str.substr(lastIndex));
             }
-            tokens[start].value = str;
-            tokens[start].index = tokens.length;
+            stripWS();
+            if (tokens[start]) {
+                tokens[start].value = normalized;
+                tokens[start].index = tokens.length;
+            }
         }
 
         while ((m = r.exec(str)) !== null) {
@@ -557,23 +639,23 @@
                 default:
                     tokens.push({
                         op: OP_EVAL,
+                        cindex: controlStack[0].tokenIndex,
                         expression: parsePipe(m[2]),
                         noescape: m[1] === '&'
                     });
             }
         }
-        if (lastIndex !== str.length) {
-            parseOut(str.substr(lastIndex));
-        }
+        parseOut(str.substr(lastIndex));
         tokens.value = str;
         return tokens;
     }
 
-    function evaluate(tokens, options) {
+    function evaluate(tokens, options, outstr) {
         var output = [];
         var htmlStack = options.html || options.htmlPartial ? [document.createDocumentFragment()] : [];
         var objStack = options.objStack || [];
         var iteratorStack = options.iteratorStack || [];
+        var result;
 
         function Iterable(obj) {
             this.keys = keys(obj);
@@ -625,7 +707,7 @@
                 value = value[Array.isArray(objectPath[i]) ? string(evaluateObjectPath(objectPath[i])) : objectPath[i]];
             }
             evaluateObjectPath.valid = valid;
-            return typeof value === 'function' ? undefined : value;
+            return isFunction(value) ? undefined : value;
         }
 
         function evaluatePipe(pipe, start, end) {
@@ -637,11 +719,10 @@
             var i = start;
             var resetPos = start;
 
-
             var varargs = {
                 globals: options.globals,
                 eval: function (objectPath) {
-                    return evaluateObjectPath(parseObjectPath(objectPath));
+                    return evaluateObjectPath(cached(parseObjectPath, objectPath));
                 },
                 stop: function () {
                     i = end + 1;
@@ -658,10 +739,13 @@
                 hasArgs: function () {
                     return i <= end;
                 },
+                state: function () {
+                    return i > end ? 'end' : pipe[i].length() ? 'func' : pipe[i].canEvaluate === undefined ? 'auto' : pipe[i].canEvaluate ? 'path' : 'const';
+                },
                 raw: function () {
                     return i <= end ? varargs.fn() || pipe[i++].value : undefined;
                 },
-                next: function (acceptFn) {
+                next: function (preferObject) {
                     var reset = resetPos === i;
                     if (i > end) {
                         return reset ? input : undefined;
@@ -669,12 +753,12 @@
                     if (pipe[i].canEvaluate === false) {
                         return pipe[i++].value;
                     }
-                    var fn = acceptFn !== false && varargs.fn();
+                    var fn = varargs.fn();
                     if (fn) {
                         return fn(reset ? input : value);
                     }
                     var v = evaluateObjectPath(pipe[i].objectPath(), reset);
-                    if (pipe[i].canEvaluate || (evaluateObjectPath.valid && (reset || !primitive(value) || primitive(v)))) {
+                    if (pipe[i].canEvaluate || (evaluateObjectPath.valid && (reset || preferObject || !primitive(value) || primitive(v)))) {
                         return (++i, v);
                     }
                     return reset ? input : pipe[i++].value;
@@ -695,8 +779,8 @@
                             }
                         };
                     }
-                    if (typeof wrapFn === 'function') {
-                        return wrapFn(varargs.next(false));
+                    if (isFunction(wrapFn)) {
+                        return wrapFn(varargs.next());
                     }
                 }
             };
@@ -707,7 +791,7 @@
                 var name = pipe[i++].textValue;
                 try {
                     var func = pipes[name] || pipes.__default__(name);
-                    if (typeof func === 'function') {
+                    if (isFunction(func)) {
                         if (func.varargs) {
                             value = func.call(options.globals, value, varargs);
                         } else {
@@ -733,8 +817,8 @@
                                     value = func.apply(options.globals, args);
                             }
                         }
-                    } else if (typeof func === 'string') {
-                        value = waterpipe(func, value, options);
+                    } else if (isString(func)) {
+                        value = run(func, value, options);
                         if (options.html && value instanceof Node) {
                             return void htmlStack[0].appendChild(value);
                         }
@@ -744,7 +828,7 @@
                         throw new Error('Invalid pipe function');
                     }
                 } catch (e) {
-                    return console.warn(e.toString() + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
+                    return console.warn(e.toString() + ' ' + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
                 }
             }
             return returnArray.length ? flatten(returnArray.concat(value)) : value;
@@ -789,7 +873,8 @@
                 switch (t.op) {
                     case OP_EVAL:
                         var prevCount = evalCount;
-                        var result = evaluatePipe(t.expression);
+                        result = evaluatePipe(t.expression);
+                        outstr = outstr !== undefined;
                         if (evallable(result)) {
                             output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
                         }
@@ -818,6 +903,7 @@
                         i = t.index;
                         break;
                     default:
+                        outstr = t.ws ? outstr : true;
                         if (options.html || options.htmlPartial) {
                             var currentElm = htmlStack[0];
                             switch (t.op) {
@@ -844,7 +930,7 @@
                 }
             }
         } finally {
-            evalCount = (evalCount + 1) & 0xFFFF;
+            evalCount = (evalCount + !!outstr) & 0xFFFF;
         }
         if (options.html) {
             flushOutput(htmlStack[0]);
@@ -854,24 +940,31 @@
             }
             return htmlStack[0];
         }
-        return output.join('').replace(/^\s+(?=<)|(>)\s+(<|$)/g, '$1$2');
+        return outstr === true ? output.join('') : result;
     }
 
-    function waterpipe(str, data, options) {
+    function run(str, data, options, outstr) {
         str = string(str || '');
         options = options || {};
         if (options.html && typeof document === 'undefined') {
             throw new Error('HTML mode can only be used in browsers.');
         }
-        var t = cache[str] = (cache[str] || parse(str));
-        return evaluate(t, {
+        return evaluate(cached(parse, str), {
             objStack: [data],
             html: options.html,
             globals: inherit(waterpipe.globals, options.globals)
-        });
+        }, outstr);
+    }
+
+    function waterpipe(str, data, options) {
+        return run(str, data, options, true);
     }
 
     waterpipe.globals = {};
+    waterpipe.string = string;
+    waterpipe.eval = function (str, data) {
+        return run('{{' + str + '}}', data);
+    };
     waterpipe.pipes = extend(pipes, {
         __default__: constFn(),
         keys: keys,
@@ -910,6 +1003,18 @@
         notequals: function (a, b) {
             return (string(a) !== string(b));
         },
+        iequals: strargs(function (a, b) {
+            return a.toLowerCase() === b.toLowerCase();
+        }),
+        inotequals: strargs(function (a, b) {
+            return a.toLowerCase() !== b.toLowerCase();
+        }),
+        startswith: strargs(function (a, b) {
+            return b && a.substr(0, b.length) === b;
+        }),
+        endswith: strargs(function (a, b) {
+            return b && a.substr(-b.length) === b;
+        }),
         even: function (num) {
             return ((+num & 1) === 0);
         },
@@ -920,7 +1025,7 @@
             return (string(str).indexOf(needle) >= 0);
         },
         like: function (str, regex) {
-            regex = parseRegExp(regex);
+            regex = cached(parseRegExp, regex);
             return (regex !== false && regex.test(str));
         },
         or: function (obj, val) {
@@ -950,7 +1055,7 @@
         replace: function (str, varargs) {
             var regex = string(varargs.next());
             var fn = varargs.fn() || string(varargs.next());
-            return string(str).replace(parseRegExp(regex) || regex, !fn.call ? fn : function () {
+            return string(str).replace(cached(parseRegExp, regex) || regex, !fn.call ? fn : function () {
                 var m = slice.apply(null, arguments);
                 m.input = m.pop();
                 m.index = m.pop();
@@ -1006,6 +1111,13 @@
             str = string(str);
             return str.charAt(0).toUpperCase() + str.substr(1);
         },
+        lcfirst: function (str) {
+            str = string(str);
+            return str.charAt(0).toLowerCase() + str.substr(1);
+        },
+        hyphenate: function (str) {
+            return cached(hyphenate, str);
+        },
         plus: function (a, b) {
             return (+a || 0) + (+b || 0);
         },
@@ -1060,23 +1172,26 @@
             return result;
         },
         first: function (arr, varargs) {
-            return first(arr, varargs.fn(keyFn));
+            return first(arr, detectKeyFn(varargs, arr));
         },
         any: function (arr, varargs) {
-            return first(arr, varargs.fn(keyFn), true);
+            return !!first(arr, detectKeyFn(varargs, arr), true);
         },
         all: function (arr, varargs) {
-            return !first(arr, varargs.fn(keyFn), true, true);
+            return !first(arr, detectKeyFn(varargs, arr), true, true);
+        },
+        none: function (arr, varargs) {
+            return !first(arr, detectKeyFn(varargs, arr), true);
         },
         where: function (arr, varargs) {
-            return where(arr, varargs.fn(keyFn));
+            return where(arr, detectKeyFn(varargs, arr));
         },
         map: function (arr, varargs) {
-            return where(arr, constFn(true), varargs.fn(keyFn));
+            return where(arr, constFn(true), detectKeyFn(varargs, arr));
         },
         sum: function (arr, varargs) {
             var result;
-            var fn = varargs.fn() || ((result = varargs.next()), varargs.fn() || (varargs.hasArgs() ? keyFn(varargs.next()) : pass));
+            var fn = varargs.fn() || ((result = varargs.next()), varargs.fn() || (varargs.hasArgs() ? detectKeyFn(varargs, arr) : pass));
             each(arr, function (i, v) {
                 result = result ? result + fn(v, i) : fn(v, i);
             });
@@ -1084,7 +1199,7 @@
         },
         sortby: function (arr, varargs) {
             var result = Array.isArray(arr) ? new Array(arr.length) : {};
-            var fn = varargs.fn(keyFn);
+            var fn = detectKeyFn(varargs, arr);
             var tmp = [];
             var j = 0;
             each(arr, function (i, v) {
@@ -1098,7 +1213,7 @@
         },
         groupby: function (arr, varargs) {
             var result = {};
-            var fn = varargs.fn(keyFn);
+            var fn = detectKeyFn(varargs, arr);
             each(arr, function (i, v) {
                 var key = string(fn(v, i));
                 if (!result.hasOwnProperty(key)) {
@@ -1107,6 +1222,10 @@
                 result[key][arr.push ? result[key].length : i] = v;
             });
             return result;
+        },
+        in: function (value, varargs) {
+            var b = varargs.next(true);
+            return Array.isArray(b) ? b.indexOf(value) >= 0 : typeof b === 'object' && value in b;
         },
         '&&': function (value, varargs) {
             return value ? varargs.reset() : varargs.stop();
@@ -1119,10 +1238,10 @@
             return varargs.reset();
         }
     });
-    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals <less <=orless >more >=ormore ..to').replace(/(\W{1,2})(\S+)\s?/g, function (v, a, b) {
+    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all sum map test not sortby groupby replace as let && || |'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby groupby replace as let in && || |'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 

@@ -1,6 +1,9 @@
 {
     "globals": {
         "myGlobal": "global",
+        "specialChars": "<>",
+        "arrOfOdd": [1, 3, 5, 7, 9, 11],
+        "arrOfEven": [2, 4, 6, 8, 10, 12],
         "arrOfFib": [1, 1, 2, 3, 5, 8],
         "arrOfFibObj": [{
             "value": 1,
@@ -30,7 +33,8 @@
         }
     },
     "pipes": {
-        "myTemplate": "{{.}}",
+        "myTemplate": "{{if .}}{{.}}{{else}}  {{/if}}",
+        "myTemplateTestOut": "value={{@root}}",
         "myTemplateTestStack": "{{@1}}",
         "myTemplateTestGlobal": "{{customGlobal}}",
         "myTemplateTestGlobalOverwrite": "{{let customGlobal false}}"
@@ -403,9 +407,17 @@
             }
         },
         "Template inclusion": {
-            "should work like pipe function and return string": {
+            "should return template result with piped value as root object": {
+                "template": "{{arrOfFib myTemplateTestOut}}",
+                "expect": "value=[1,1,2,3,5,8]"
+            },
+            "should not double encode HTML entites": {
+                "template": "{{specialChars myTemplateTestOut}}",
+                "expect": "value=&lt;&gt;"
+            },
+            "should return pipe result if there is exectly one pipe evaluation and does not have non-WS non-evaluated output": {
                 "template": "{{arrOfFib myTemplate length}}",
-                "expect": "13"
+                "expect": "6"
             },
             "should have new object stack": {
                 "input": "foobar",
@@ -492,8 +504,13 @@
                 "expect": "false"
             },
             "equals of arrays": {
-                "template": "{{arrOfFib == arrOfFib}}",
-                "expect": "true"
+                "input": {
+                    "a": [1, 2, 3],
+                    "b": [1, 2, 3],
+                    "c": [2, 3, 4]
+                },
+                "template": "{{a == b}}:{{a == c}}",
+                "expect": "true:false"
             },
             "notequals": {
                 "input": {
@@ -503,6 +520,31 @@
                 "template": "{{a != b}}",
                 "expect": "true"
             },
+            "notequals of arrays": {
+                "input": {
+                    "a": [1, 2, 3],
+                    "b": [1, 2, 3],
+                    "c": [2, 3, 4]
+                },
+                "template": "{{a != b}}:{{a != c}}",
+                "expect": "false:true"
+            },
+            "iequals": {
+                "input": {
+                    "a": "foobar",
+                    "b": "FOOBAR"
+                },
+                "template": "{{a ~= b}}",
+                "expect": "true"
+            },
+            "inotequals": {
+                "input": {
+                    "a": "foobar",
+                    "b": "FOOBAR"
+                },
+                "template": "{{a !~= b}}",
+                "expect": "false"
+            },
             "less": {
                 "input": {
                     "a": 1,
@@ -510,6 +552,15 @@
                 },
                 "template": "{{a > b}}",
                 "expect": "false"
+            },
+            "less of arrays": {
+                "input": {
+                    "a": [1, 2],
+                    "b": [1, 2, 3],
+                    "c": [1, 2, 4]
+                },
+                "template": "{{a < b}}:{{b < c}}",
+                "expect": "true:true"
             },
             "orless": {
                 "input": {
@@ -526,6 +577,15 @@
                 },
                 "template": "{{a >= b}}",
                 "expect": "false"
+            },
+            "more of arrays": {
+                "input": {
+                    "a": [1, 2],
+                    "b": [1, 2, 3],
+                    "c": [1, 2, 4]
+                },
+                "template": "{{a > b}}:{{b > c}}",
+                "expect": "false:false"
             },
             "ormore": {
                 "input": {
@@ -545,6 +605,16 @@
             "contains": {
                 "input": {},
                 "template": "{{\"foobar\" contains foo}}",
+                "expect": "true"
+            },
+            "startswith": {
+                "input": {},
+                "template": "{{\"foobar\" startswith foo}}",
+                "expect": "true"
+            },
+            "endswith": {
+                "input": {},
+                "template": "{{\"foobar\" endswith bar}}",
                 "expect": "true"
             },
             "like": {
@@ -662,6 +732,14 @@
             "ucfirst": {
                 "template": "{{\"foo\" ucfirst}}",
                 "expect": "Foo"
+            },
+            "lcfirst": {
+                "template": "{{\"FOO\" lcfirst}}",
+                "expect": "fOO"
+            },
+            "hyphenate": {
+                "template": "{{\"camelCase\" hyphenate}}:{{\"PascalCase\" hyphenate}}:{{\"consecutiveUPPERCASEWord\" hyphenate}}",
+                "expect": "camel-case:pascal-case:consecutive-uppercase-word"
             }
         },
         "Math functions": {
@@ -740,8 +818,8 @@
                 "expect": "[1,1,0,1,1,0]"
             },
             "where fn": {
-                "template": "{{arrOfFib where [ even ]}}",
-                "expect": "[2,8]"
+                "template": "{{arrOfFib where [ even ]}}:{{arrOfOdd where [ even ]}}:{{arrOfEven where [ even ]}}",
+                "expect": "[2,8]:[]:[2,4,6,8,10,12]"
             },
             "where key": {
                 "template": "{{arrOfFibObj where even}}",
@@ -752,8 +830,8 @@
                 "expect": "{&quot;two&quot;:2,&quot;four&quot;:4}"
             },
             "first fn": {
-                "template": "{{arrOfFib first [ even ]}}",
-                "expect": "2"
+                "template": "{{arrOfFib first [ even ]}}:{{arrOfOdd first [ even ]}}:{{arrOfEven first [ even ]}}",
+                "expect": "2::2"
             },
             "first key": {
                 "template": "{{arrOfFibObj first even}}",
@@ -764,8 +842,8 @@
                 "expect": "2"
             },
             "any fn": {
-                "template": "{{arrOfFib any [ even ]}}",
-                "expect": "true"
+                "template": "{{arrOfFib any [ even ]}}:{{arrOfOdd any [ even ]}}:{{arrOfEven any [ even ]}}",
+                "expect": "true:false:true"
             },
             "any key": {
                 "template": "{{arrOfFibObj any even}}",
@@ -776,8 +854,8 @@
                 "expect": "true"
             },
             "all fn": {
-                "template": "{{arrOfFib all [ even ]}}",
-                "expect": "false"
+                "template": "{{arrOfFib all [ even ]}}:{{arrOfOdd all [ even ]}}:{{arrOfEven all [ even ]}}",
+                "expect": "false:false:true"
             },
             "all key": {
                 "template": "{{arrOfFibObj all even}}",
@@ -786,6 +864,10 @@
             "all of object": {
                 "template": "{{numbers all [ even ]}}",
                 "expect": "false"
+            },
+            "none fn": {
+                "template": "{{arrOfFib none [ even ]}}:{{arrOfOdd none [ even ]}}:{{arrOfEven none [ even ]}}",
+                "expect": "false:true:false"
             },
             "sum": {
                 "template": "{{arrOfFib sum}}",
@@ -847,6 +929,10 @@
                 "template": "{{arrOfFib reverse}}",
                 "expect": "[8,5,3,2,1,1]"
             },
+            "in": {
+                "template": "{{\"1\" in arrOfFib}}:{{\"0\" in arrOfFib}}",
+                "expect": "true:false"
+            },
             "length": {
                 "template": "{{length}}:{{\"foo\" length}}:{{arrOfFib length}}",
                 "expect": "0:3:6"
@@ -886,6 +972,19 @@
                 "template": "</b>",
                 "expect": "</b>"
             },
+            "should collapse whitespace characters between tags and attributes": {
+                "template": " <div  id=\"id\"  class=\"class\"> <span> </span> <span> </span> </div> ",
+                "expect": "<div id=\"id\" class=\"class\"><span></span><span></span></div>"
+            },
+            "should collapse multiple whitespace characters between text contents": {
+                "template": "<div>    This    is    sample    text</div>",
+                "expect": "<div>This is sample text</div>"
+            },
+            "should not collapse whitespace characters returned from pipe evaluation": {
+                "input": "   sample   ",
+                "template": "<div>    This    is    {{.}}    text</div>",
+                "expect": "<div>This is    sample    text</div>"
+            },
             "should throw error on mismatched template statement": {
                 "template": "{{foreach}}{{/if}}",
                 "exception": true
@@ -894,6 +993,13 @@
                 "template": "{{myGlobal noThisPipe}}",
                 "expect": "",
                 "warn": true
+            }
+        },
+        "waterpipe.eval()": {
+            "should evaluate input string as a single pipe": {
+                "func": "eval",
+                "template": "arrOfFib where [ even ]",
+                "expect": [2, 8]
             }
         }
     }

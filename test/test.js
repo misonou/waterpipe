@@ -41,7 +41,7 @@ for (var i in spec.tests) {
                 it(i, (function (t) {
                     return function () {
                         function execute() {
-                            assert.strictEqual(waterpipe(t.template, t.input, t.globals && {
+                            assert.deepStrictEqual((t.func ? waterpipe[t.func] : waterpipe)(t.template, t.input, t.globals && {
                                 globals: t.globals
                             }), t.expect);
                         }
