@@ -32,10 +32,6 @@ waterpipe('The value is {{value}}.', { value: 1 }); // The value is 1.
 
 ```javascript
 {
-    // true to output DOM objects instead of a string
-    // see the section "Contextified DOM Output"
-    html: false,
-
     // global variables that are available anywhere in the template
     // variables declared here will override those in waterpipe.globals
     globals: {}

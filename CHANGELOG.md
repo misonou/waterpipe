@@ -1,3 +1,10 @@
+## V2.1.0 / 2017-09-04
+
+- Introduce single-valued template
+- Introduce whitespace normalization
+- New built-in pipe functions: `~=`, `!~=`, `^=`, `$=`, `none`, `lcfirst`, `hyphenate`, `in`
+- Improved key detection in array/object pipe functions
+
 ## v2.0.0 / 2017-03-20
 
 Introduce new feature

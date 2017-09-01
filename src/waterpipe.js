@@ -41,12 +41,8 @@
     var OP_ITER_END = 3;
     var OP_ITER = 4;
     var OP_JUMP = 5;
-
-    var HTMLOP_ELEMENT_START = 6;
-    var HTMLOP_ELEMENT_END = 7;
-    var HTMLOP_ATTR_END = 8;
-    var HTMLOP_ATTR_START = 9;
-    var HTMLOP_TEXT = 10;
+    var OP_SPACE = 6;
+    var OP_TEXT = 7;
 
     var EVAL_STACK = 1;
     var EVAL_ITER_KEY = 2;
@@ -135,12 +131,9 @@
     }
 
     function keyFn(key) {
-        if (evallable(key)) {
-            return function (obj) {
-                return evallable(obj) ? obj[key] : undefined;
-            };
-        }
-        return constFn();
+        return function (obj) {
+            return evallable(obj) ? obj[key] : undefined;
+        };
     }
 
     function detectKeyFn(varargs, arr) {
@@ -402,7 +395,7 @@
     function parse(str) {
         var tokens = [];
         var controlStack = [{}];
-        var htmlStack = [];
+        var htmlStack = [{}];
         var lastIndex = 0;
         var m, r = /\{\{([\/!]|foreach(?=\s|\})|if(?:\snot)?(?=\s)|else(?:if(?:\snot)?(?=\s))?|&?(?!\}))\s*((?:\}(?!\})|[^}])*)\}\}/g;
 
@@ -421,55 +414,36 @@
             return t.reverse();
         }
 
-        function parseOut(str) {
+        function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([^\s>\/]+)|\/?>|([^\s=\/<>"]+)(?:(?=[\s\/<>])|=")|"/ig;
+            var m, r = /<(\/?)([0-9a-z]+)|\/?>|([0-9a-z]+)(?:="|(?=[\s=\/<>"]))|"/ig;
             var lastIndex = 0;
-            var normalized = '';
 
-            function startTextContent() {
-                if (htmlStack[0]) {
-                    htmlStack[0].offsets.push(tokens.length);
-                }
-            }
-
-            function endTextContent() {
-                if (htmlStack[0]) {
-                    var offsets = htmlStack[0].offsets;
-                    if (offsets[offsets.length - 1] === tokens.length) {
-                        offsets.pop();
-                    } else {
-                        offsets.push(tokens.length);
-                    }
-                }
+            function shiftHtmlStack() {
+                return htmlStack.length > (controlStack[0].htmlStackCount || 1) && htmlStack.shift();
             }
 
             function insertWS() {
-                var last = tokens[tokens.length - 1];
-                return last && (last.op === HTMLOP_TEXT || last.op === HTMLOP_ATTR_START || last.op === OP_EVAL) && last.cindex === controlStack[0].tokenIndex ? ' ' : '';
+                var lastOp = (tokens[tokens.length - 1] || '').op;
+                return lastOp === OP_TEXT || lastOp === OP_EVAL ? ' ' : '';
             }
 
             function stripWS() {
-                if (!insertWS() && tokens.length && tokens[tokens.length - 1].text === ' ') {
-                    normalized = normalized.slice(0, -1);
-                    tokens.pop();
-                }
+                return tokens.length > start && tokens[tokens.length - 1].ws && tokens.pop();
             }
 
-            function writeText(str) {
-                str = str.replace(/^\s+|\s+$/g, '') || insertWS();
+            function writeText(str, noescape) {
+                str = noescape ? str : (htmlStack[0].attrName || htmlStack[0].opened) && (escape(str.replace(/^\s+|\s+$/g, '')) || insertWS());
                 if (str) {
-                    normalized += str;
                     tokens.push({
-                        op: HTMLOP_TEXT,
-                        cindex: controlStack[0].tokenIndex,
-                        text: str
+                        op: str === ' ' ? OP_SPACE : OP_TEXT,
+                        stripWS: noescape,
+                        value: str
                     });
                 }
             }
 
             while ((m = r.exec(str)) !== null) {
-                var current = htmlStack[0];
                 if (lastIndex !== m.index) {
                     writeText(str.substring(lastIndex, m.index));
                 }
@@ -477,96 +451,71 @@
 
                 switch (m[0].charAt(0)) {
                     case '<':
-                        if (current && m[1]) {
-                            if (current.tagName === m[2] || (VOID_TAGS.indexOf(current.tagName.toLowerCase()) >= 0 && htmlStack.shift() && (current = htmlStack[0]))) {
-                                current.opened = false;
-                                stripWS();
-                                normalized += m[0];
-                                continue;
+                        stripWS();
+                        while (VOID_TAGS.indexOf((htmlStack[0].tagName || '').toLowerCase()) >= 0 && shiftHtmlStack());
+                        if (m[1]) {
+                            if (htmlStack[0].tagName !== m[2] || htmlStack.length <= (controlStack[0].htmlStackCount || 1)) {
+                                htmlStack[0].muteTagEnd = true;
+                                htmlStack[0].opened = undefined;
+                            } else {
+                                writeText(m[0], true);
+                                htmlStack[0].opened = false;
                             }
                         } else {
-                            endTextContent();
-                            stripWS();
                             htmlStack.unshift({
-                                op: HTMLOP_ELEMENT_START,
-                                tagName: m[2],
-                                offsets: [],
-                                attrs: {}
+                                tagName: m[2]
                             });
-                            tokens.push(htmlStack[0]);
-                            normalized += m[0];
-                            continue;
+                            writeText(m[0], true);
                         }
-                        break;
+                        continue;
                     case '>':
                     case '/':
-                        if (current && current.tagName) {
-                            if (current.opened === false || m[0] === '/>') {
-                                endTextContent();
-                                tokens.push({
-                                    op: HTMLOP_ELEMENT_END
-                                });
-                                htmlStack.shift();
-                                startTextContent();
-                            } else if (m[0] === '>') {
-                                current.opened = true;
-                                startTextContent();
+                        if (htmlStack[0].tagName && (!htmlStack[0].opened || m[0] === '/>')) {
+                            if (htmlStack[0].muteTagEnd) {
+                                htmlStack[0].muteTagEnd = false;
+                            } else {
+                                writeText(m[0], true);
                             }
-                            normalized += m[0];
+                            if ((htmlStack[0].opened !== false && m[0] !== '/>') || !shiftHtmlStack()) {
+                                htmlStack[0].opened = true;
+                            }
                             continue;
                         }
                         break;
                     case '"':
-                        if (current && current.attrName) {
-                            endTextContent();
-                            tokens.push({
-                                op: HTMLOP_ATTR_END,
-                                attrName: current.attrName
-                            });
-                            htmlStack.shift();
-                            normalized += m[0];
+                        if (htmlStack[0].attrName && shiftHtmlStack()) {
+                            writeText(m[0], true);
                             continue;
                         }
                         break;
                     default:
-                        if (current && current.tagName && !current.opened) {
-                            if (m[0].indexOf('=') < 0) {
-                                tokens.push({
-                                    op: HTMLOP_ATTR_END,
+                        if (htmlStack[0].tagName && !htmlStack[0].opened) {
+                            if (m[0].indexOf('=') < 0) {} else {
+                                htmlStack.unshift({
                                     attrName: m[3]
                                 });
-                            } else {
-                                htmlStack.unshift({
-                                    op: HTMLOP_ATTR_START,
-                                    cindex: controlStack[0].tokenIndex,
-                                    attrName: m[3],
-                                    offsets: []
-                                });
-                                current.attrs[m[3]] = htmlStack[0];
-                                tokens.push(htmlStack[0]);
-                                startTextContent();
                             }
-                            normalized += ' ' + m[0];
+                            writeText(' ' + m[0], true);
                             continue;
                         }
                 }
-                if (!current || current.attrName || current.opened) {
-                    writeText(m[0]);
-                }
+                writeText(m[0]);
             }
             if (lastIndex !== str.length) {
                 writeText(str.substr(lastIndex));
             }
-            stripWS();
-            if (tokens[start]) {
-                tokens[start].value = normalized;
-                tokens[start].index = tokens.length;
+            if (!insertWS()) {
+                stripWS();
+            }
+            while (htmlStack[htmlStackCount]) {
+                writeText('</' + htmlStack.shift().tagName + '>', true);
             }
         }
 
+        htmlStack[0].opened = true;
         while ((m = r.exec(str)) !== null) {
             if (lastIndex !== m.index) {
-                parseOut(str.substring(lastIndex, m.index));
+                parseHTML(str.substring(lastIndex, m.index));
             }
             lastIndex = r.lastIndex;
 
@@ -575,6 +524,7 @@
                     break;
                 case '/':
                     assert(controlStack[0] && m[2] === controlStack[0].tokenName);
+                    parseHTML('', controlStack[0].htmlStackCount);
                     controlStack[0].token.index = tokens.length;
                     if (controlStack[0].tokenIf && !controlStack[0].tokenIf.index) {
                         controlStack[0].tokenIf.index = tokens.length;
@@ -590,6 +540,7 @@
                 case TOKEN_IF:
                 case TOKEN_IFNOT:
                     controlStack.unshift({
+                        htmlStackCount: htmlStack.length,
                         tokenIndex: tokens.length,
                         tokenName: TOKEN_IF,
                         token: {
@@ -604,7 +555,9 @@
                 case TOKEN_ELSEIF:
                 case TOKEN_ELSEIFNOT:
                     assert(controlStack[0] && controlStack[0].tokenName === TOKEN_IF);
+                    parseHTML('', controlStack[0].htmlStackCount);
                     var previousControl = controlStack.splice(0, 1, {
+                        htmlStackCount: controlStack[0].htmlStackCount,
                         tokenIndex: tokens.length,
                         tokenName: TOKEN_IF,
                         token: {
@@ -627,6 +580,7 @@
                     break;
                 case TOKEN_FOREACH:
                     controlStack.unshift({
+                        htmlStackCount: htmlStack.length,
                         tokenIndex: tokens.length,
                         tokenName: TOKEN_FOREACH,
                         token: {
@@ -639,20 +593,18 @@
                 default:
                     tokens.push({
                         op: OP_EVAL,
-                        cindex: controlStack[0].tokenIndex,
                         expression: parsePipe(m[2]),
                         noescape: m[1] === '&'
                     });
             }
         }
-        parseOut(str.substr(lastIndex));
+        parseHTML(str.substr(lastIndex), 1);
         tokens.value = str;
         return tokens;
     }
 
     function evaluate(tokens, options, outstr) {
         var output = [];
-        var htmlStack = options.html || options.htmlPartial ? [document.createDocumentFragment()] : [];
         var objStack = options.objStack || [];
         var iteratorStack = options.iteratorStack || [];
         var result;
@@ -819,9 +771,6 @@
                         }
                     } else if (isString(func)) {
                         value = run(func, value, options);
-                        if (options.html && value instanceof Node) {
-                            return void htmlStack[0].appendChild(value);
-                        }
                     } else if (startpos === resetPos) {
                         value = pipe[i - 1].canEvaluate === false ? pipe[i - 1].value : undefined;
                     } else {
@@ -834,40 +783,10 @@
             return returnArray.length ? flatten(returnArray.concat(value)) : value;
         }
 
-        function flushOutput(elm) {
-            if (output.length) {
-                elm.appendChild(document.createTextNode(output.splice(0).join('')));
-            }
-        }
-
-        function createViewFunction(elm, op) {
-            var savedObjStack = objStack.slice(0);
-            var savedIteratorStack = iteratorStack.slice(0);
-
-            function partial(start, end) {
-                return evaluate(tokens, extend({}, options, {
-                    html: false,
-                    htmlPartial: true,
-                    objStack: savedObjStack.slice(0),
-                    iteratorStack: savedIteratorStack.slice(0),
-                    globals: inherit(options.globals),
-                    start: start,
-                    end: end
-                }));
-            }
-            elm.addEventListener('objectchange', function () {
-                each(op.attrs, function (i, v) {
-                    elm.setAttribute(i, partial(v.offsets[0] - 1, v.offsets[1]));
-                });
-                if (op.offsets.length === 2) {
-                    elm.innerHTML = partial(op.offsets[0], op.offsets[1]);
-                }
-            });
-        }
-
         try {
             var i = options.start || 0;
             var e = options.end || tokens.length;
+            var ws = false;
             while (i < e) {
                 var t = tokens[i++];
                 switch (t.op) {
@@ -876,6 +795,10 @@
                         result = evaluatePipe(t.expression);
                         outstr = outstr !== undefined;
                         if (evallable(result)) {
+                            if (ws) {
+                                output.push(ws);
+                                ws = undefined;
+                            }
                             output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
                         }
                         break;
@@ -902,43 +825,20 @@
                     case OP_JUMP:
                         i = t.index;
                         break;
+                    case OP_SPACE:
+                        ws = ws !== false ? t.value : undefined;
+                        break;
                     default:
-                        outstr = t.ws ? outstr : true;
-                        if (options.html || options.htmlPartial) {
-                            var currentElm = htmlStack[0];
-                            switch (t.op) {
-                                case HTMLOP_ELEMENT_START:
-                                    flushOutput(currentElm);
-                                    htmlStack.unshift(document.createElement(t.tagName));
-                                    currentElm.appendChild(htmlStack[0]);
-                                    createViewFunction(htmlStack[0], t);
-                                    break;
-                                case HTMLOP_ELEMENT_END:
-                                    flushOutput(currentElm);
-                                    htmlStack.shift();
-                                    break;
-                                case HTMLOP_ATTR_END:
-                                    currentElm.setAttribute(t.attrName, output.splice(0).join(''));
-                                    break;
-                                case HTMLOP_TEXT:
-                                    output.push(t.text);
-                            }
-                        } else {
-                            output.push(t.value);
-                            i = t.index;
+                        if (ws && !t.stripWS) {
+                            output.push(ws);
                         }
+                        output.push(t.value);
+                        outstr = true;
+                        ws = t.stripWS ? false : undefined;
                 }
             }
         } finally {
             evalCount = (evalCount + !!outstr) & 0xFFFF;
-        }
-        if (options.html) {
-            flushOutput(htmlStack[0]);
-            if (htmlStack[0].childNodes.length === 1) {
-                var node = htmlStack[0].childNodes[0];
-                return node.nodeType === 3 ? node.nodeValue : node;
-            }
-            return htmlStack[0];
         }
         return outstr === true ? output.join('') : result;
     }
@@ -946,12 +846,8 @@
     function run(str, data, options, outstr) {
         str = string(str || '');
         options = options || {};
-        if (options.html && typeof document === 'undefined') {
-            throw new Error('HTML mode can only be used in browsers.');
-        }
         return evaluate(cached(parse, str), {
             objStack: [data],
-            html: options.html,
             globals: inherit(waterpipe.globals, options.globals)
         }, outstr);
     }
