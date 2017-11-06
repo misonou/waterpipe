@@ -416,30 +416,38 @@
 
         function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([0-9a-z]+)|\/?>|([0-9a-z]+)(?:="|(?=[\s=\/<>"]))|"/ig;
+            var m, r = /<(\/?)([0-9a-z]+)|\/?>|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"/ig;
             var lastIndex = 0;
 
             function shiftHtmlStack() {
                 return htmlStack.length > (controlStack[0].htmlStackCount || 1) && htmlStack.shift();
             }
 
-            function insertWS() {
-                var lastOp = (tokens[tokens.length - 1] || '').op;
-                return lastOp === OP_TEXT || lastOp === OP_EVAL ? ' ' : '';
-            }
-
-            function stripWS() {
-                return tokens.length > start && tokens[tokens.length - 1].ws && tokens.pop();
-            }
-
-            function writeText(str, noescape) {
-                str = noescape ? str : (htmlStack[0].attrName || htmlStack[0].opened) && (escape(str.replace(/^\s+|\s+$/g, '')) || insertWS());
-                if (str) {
-                    tokens.push({
-                        op: str === ' ' ? OP_SPACE : OP_TEXT,
-                        stripWS: noescape,
-                        value: str
-                    });
+            function writeText(str, stripWS) {
+                if (stripWS || (htmlStack[0].attrName || htmlStack[0].opened)) {
+                    str = stripWS ? str : escape(str.replace(/^\s+|\s+$/g, ''));
+                    if (str) {
+                        var last1 = tokens[tokens.length - 1];
+                        var last2 = tokens[tokens.length - 2];
+                        if (tokens.length > start && last1.op === OP_TEXT) {
+                            last1.value += str;
+                        } else if (tokens.length > start + 1 && last2.op === OP_TEXT) {
+                            last2.value += (stripWS || last2.stripWSEnd ? '' : last1.value) + str;
+                            tokens.pop();
+                        } else {
+                            tokens.push({
+                                op: OP_TEXT,
+                                stripWS: stripWS,
+                                value: str
+                            });
+                        }
+                        tokens[tokens.length - 1].stripWSEnd = stripWS;
+                    } else {
+                        tokens.push({
+                            op: OP_SPACE,
+                            value: ' '
+                        });
+                    }
                 }
             }
 
@@ -451,7 +459,6 @@
 
                 switch (m[0].charAt(0)) {
                     case '<':
-                        stripWS();
                         while (VOID_TAGS.indexOf((htmlStack[0].tagName || '').toLowerCase()) >= 0 && shiftHtmlStack());
                         if (m[1]) {
                             if (htmlStack[0].tagName !== m[2] || htmlStack.length <= (controlStack[0].htmlStackCount || 1)) {
@@ -490,7 +497,7 @@
                         break;
                     default:
                         if (htmlStack[0].tagName && !htmlStack[0].opened) {
-                            if (m[0].indexOf('=') < 0) {} else {
+                            if (m[0].indexOf('=') >= 0) {
                                 htmlStack.unshift({
                                     attrName: m[3]
                                 });
@@ -503,9 +510,6 @@
             }
             if (lastIndex !== str.length) {
                 writeText(str.substr(lastIndex));
-            }
-            if (!insertWS()) {
-                stripWS();
             }
             while (htmlStack[htmlStackCount]) {
                 writeText('</' + htmlStack.shift().tagName + '>', true);
@@ -797,8 +801,8 @@
                         if (evallable(result)) {
                             if (ws) {
                                 output.push(ws);
-                                ws = undefined;
                             }
+                            ws = undefined;
                             output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
                         }
                         break;
@@ -834,7 +838,7 @@
                         }
                         output.push(t.value);
                         outstr = true;
-                        ws = t.stripWS ? false : undefined;
+                        ws = t.stripWSEnd ? false : undefined;
                 }
             }
         } finally {

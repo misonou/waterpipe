@@ -1051,13 +1051,18 @@
                 "expect": "<div id=\"id\" class=\"class\"><span></span><span></span></div>"
             },
             "should collapse multiple whitespace characters between text contents": {
-                "template": "<div>    This    is    sample    text    </div>",
-                "expect": "<div>This is sample text</div>"
+                "template": "<div class=\"class-a  class-b\">  This  is  sample  text  </div>",
+                "expect": "<div class=\"class-a class-b\">This is sample text</div>"
             },
             "should not collapse whitespace characters returned from pipe evaluation": {
-                "input": "   sample   ",
-                "template": "<div>    This    is    {{.}}    text    </div>",
-                "expect": "<div>This is    sample    text</div>"
+                "input": "  sample  ",
+                "template": "<div>This is {{.}} text</div>",
+                "expect": "<div>This is   sample   text</div>"
+            },
+            "should preserve collapsed whitespace between pipe output": {
+                "input": "foo",
+                "template": "{{.}}  {{.}}",
+                "expect": "foo foo"
             },
             "should throw error on mismatched template statement": {
                 "template": "{{foreach}}{{/if}}",
