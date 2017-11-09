@@ -1043,16 +1043,24 @@
                 "expect": "<div><br><img><span></span></div>"
             },
             "should encode characters that does not form a valid HTML tag": {
-                "template": "<div> <\">\" </div>",
+                "template": "<div><\">\"</div>",
                 "expect": "<div>&lt;&quot;&gt;&quot;</div>"
             },
-            "should collapse whitespace characters between tags and attributes": {
-                "template": " <div  id=\"id\"  class=\"class\"> <span> </span> <span> </span> </div> ",
-                "expect": "<div id=\"id\" class=\"class\"><span></span><span></span></div>"
+            "should preserve entities in text content": {
+                "template": "<div>&lt;</div>",
+                "expect": "<div>&lt;</div>"
+            },
+            "should collapse whitespace characters between attributes": {
+                "template": "<div  id=\"id\"  class=\"class\"></div>",
+                "expect": "<div id=\"id\" class=\"class\"></div>"
+            },
+            "should trim whitespace characters at the beginning and the end": {
+                "template": " <div></div> ",
+                "expect": "<div></div>"
             },
             "should collapse multiple whitespace characters between text contents": {
-                "template": "<div class=\"class-a  class-b\">  This  is  sample  text  </div>",
-                "expect": "<div class=\"class-a class-b\">This is sample text</div>"
+                "template": "<div class=\"  class-a  class-b  \">  This  is  sample  text  </div>",
+                "expect": "<div class=\"class-a class-b\"> This is sample text </div>"
             },
             "should not collapse whitespace characters returned from pipe evaluation": {
                 "input": "  sample  ",

@@ -212,8 +212,8 @@
         return t;
     }
 
-    function escape(str) {
-        var re = /["'&<>]/;
+    function escape(str, preserveEntity) {
+        var re = preserveEntity ? /["'<>]|&(?!#\d+;|[a-z][a-z0-9]+;)/i : /["'&<>]/;
         if (!re.exec(str)) {
             return str;
         }
@@ -424,8 +424,8 @@
             }
 
             function writeText(str, stripWS) {
-                if (stripWS || (htmlStack[0].attrName || htmlStack[0].opened)) {
-                    str = stripWS ? str : escape(str.replace(/^\s+|\s+$/g, ''));
+                if (stripWS || htmlStack[0].attrName || htmlStack[0].opened) {
+                    str = stripWS ? str : escape(str.replace(/\s+/g, htmlStack[1] && htmlStack[0].opened ? ' ' : ''), true);
                     if (str) {
                         var last1 = tokens[tokens.length - 1];
                         var last2 = tokens[tokens.length - 2];
