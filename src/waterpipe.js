@@ -162,6 +162,14 @@
         return cached(keyFn, string(varargs.next()));
     }
 
+    function json(value) {
+        try {
+            return JSON.stringify(value);
+        } catch (e) {
+            return String(value);
+        }
+    }
+
     function string(value, stringify) {
         return !evallable(value) || value !== value || isFunction(value) ? '' : isString(value) ? value : (stringify || String)(value);
     }
@@ -803,7 +811,7 @@
                                 output.push(ws);
                             }
                             ws = undefined;
-                            output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, JSON.stringify)));
+                            output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, json)));
                         }
                         break;
                     case OP_ITER:
