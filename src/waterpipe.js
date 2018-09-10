@@ -862,8 +862,8 @@
 
     waterpipe.globals = {};
     waterpipe.string = string;
-    waterpipe.eval = function (str, data) {
-        return run('{{' + str + '}}', data);
+    waterpipe.eval = function (str, data, options) {
+        return run('{{' + str + '}}', data, options);
     };
     waterpipe.pipes = extend(pipes, {
         __default__: constFn(),
