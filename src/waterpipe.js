@@ -805,8 +805,8 @@
                     case OP_EVAL:
                         var prevCount = evalCount;
                         result = evaluatePipe(t.expression);
-                        outstr = outstr !== undefined;
                         if (evallable(result)) {
+                            outstr = outstr !== undefined;
                             if (ws) {
                                 output.push(ws);
                             }
