@@ -1135,6 +1135,9 @@
             var b = varargs.next(true);
             return Array.isArray(b) ? b.indexOf(value) >= 0 : typeof b === 'object' && value in b;
         },
+        '??': function (a, b) {
+            return a !== null && a !== undefined ? a : b;
+        },
         '&&': function (value, varargs) {
             return value ? varargs.reset() : varargs.stop();
         },
