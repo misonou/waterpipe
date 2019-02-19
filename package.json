@@ -1,8 +1,9 @@
 {
   "name": "waterpipe",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "JavaScript template engine",
   "main": "src/waterpipe.js",
+  "types": "typings/index.d.ts",
   "dependencies": {},
   "devDependencies": {
     "mocha": "^3.2.0"

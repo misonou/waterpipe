@@ -1,4 +1,5 @@
 /node_modules/
 /coverage/
+/dev/
 .vscode
 .DS_Store
