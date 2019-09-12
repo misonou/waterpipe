@@ -1,3 +1,7 @@
+## v2.2.2 / 2019-09-12
+
+- Fix: whitespace characters stripped in non-HTML content
+
 ## v2.2.0 / 2018-10-23
 
 - Allow options in `waterpipe.eval()`

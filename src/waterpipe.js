@@ -1,5 +1,5 @@
 /*!
- * Waterpipe JavaScript Template v2.2.0
+ * Waterpipe JavaScript Template v2.2.2
  *
  * The MIT License (MIT)
  *
@@ -433,8 +433,8 @@
 
             function writeText(str, stripWS) {
                 if (stripWS || htmlStack[0].attrName || htmlStack[0].opened) {
-                    str = stripWS ? str : escape(str.replace(/\s+/g, htmlStack[1] && htmlStack[0].opened ? ' ' : ''), true);
-                    if (str) {
+                    str = stripWS ? str : escape(str.replace(/\s+/g, htmlStack[0].opened ? ' ' : ''), true);
+                    if (str && (htmlStack[1] || str != ' ')) {
                         var last1 = tokens[tokens.length - 1];
                         var last2 = tokens[tokens.length - 2];
                         if (tokens.length > start && last1.op === OP_TEXT) {
@@ -524,6 +524,7 @@
             }
         }
 
+        str = string(str).replace(/^\s+|\s+$/g, '');
         htmlStack[0].opened = true;
         while ((m = r.exec(str)) !== null) {
             if (lastIndex !== m.index) {
