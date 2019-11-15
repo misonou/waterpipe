@@ -1,5 +1,5 @@
 /*!
- * Waterpipe JavaScript Template v2.2.2
+ * Waterpipe JavaScript Template v2.2.3
  *
  * The MIT License (MIT)
  *
