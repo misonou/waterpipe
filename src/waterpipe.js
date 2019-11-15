@@ -433,7 +433,7 @@
 
             function writeText(str, stripWS) {
                 if (stripWS || htmlStack[0].attrName || htmlStack[0].opened) {
-                    str = stripWS ? str : escape(str.replace(/\s+/g, htmlStack[0].opened ? ' ' : ''), true);
+                    str = stripWS || htmlStack[0].attrName ? str : escape(str.replace(/\s+/g, htmlStack[0].opened ? ' ' : ''), true);
                     if (str && (htmlStack[1] || str != ' ')) {
                         var last1 = tokens[tokens.length - 1];
                         var last2 = tokens[tokens.length - 2];
