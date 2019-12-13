@@ -34,6 +34,7 @@ for (var i in spec.globals) {
 for (var i in spec.pipes) {
     waterpipe.pipes[i] = spec.pipes[i];
 }
+waterpipe.globals.circular = waterpipe.globals;
 for (var i in spec.tests) {
     describe(i, (function (t) {
         return function () {
@@ -41,9 +42,10 @@ for (var i in spec.tests) {
                 it(i, (function (t) {
                     return function () {
                         function execute() {
-                            assert.deepStrictEqual((t.func ? waterpipe[t.func] : waterpipe)(t.template, t.input, t.globals && {
+                            var options = Object.assign({}, t.options, t.globals && {
                                 globals: t.globals
-                            }), t.expect);
+                            });
+                            assert.deepStrictEqual((t.func ? waterpipe[t.func] : waterpipe)(t.template, t.input, options), t.expect);
                         }
                         var prevCount = consoleWarnCount;
                         if (t.exception) {

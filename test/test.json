@@ -38,7 +38,8 @@
         "myTemplateTestOut": "value={{@root}}",
         "myTemplateTestStack": "{{@1}}",
         "myTemplateTestGlobal": "{{customGlobal}}",
-        "myTemplateTestGlobalOverwrite": "{{let customGlobal false}}"
+        "myTemplateTestGlobalOverwrite": "{{let customGlobal false}}",
+        "myTemplateHTML": "<a>\r\n<b>myTemplateHTML</b>\r\n</a>"
     },
     "tests": {
         "Object path": {
@@ -194,6 +195,10 @@
                 },
                 "template": "{{.}}",
                 "expect": "{&quot;prop&quot;:1}"
+            },
+            "should output primitive String conversion with cyclic object": {
+                "template": "{{circular}}",
+                "expect": "[object Object]"
             },
             "should output empty string with undefined": {
                 "template": "{{.}}",
@@ -651,6 +656,10 @@
             "not": {
                 "template": "{{false not}}:{{not true}}",
                 "expect": "true:false"
+            },
+            "??": {
+                "template": "{{false ?? 1}}:{{null ?? 1}}:{{undefined ?? 1}}",
+                "expect": "false:1:1"
             }
         },
         "String functions": {
@@ -986,8 +995,8 @@
         },
         "Formatting functions": {
             ":printf": {
-                "template": "{{3.14 :printf %d}}",
-                "expect": "3"
+                "template": "{{3.14 :printf %d}}:{{3.14 %d}}",
+                "expect": "3:3"
             },
             ":query": {
                 "input": {
@@ -998,8 +1007,8 @@
                 "expect": "p1=value1&p2=value2"
             },
             ":date": {
-                "template": "{{0 :date \"yyyy/MM/dd HH:mm:ss.ffffffzzz hhtt g yy MMM MMMM ddd dddd\"}}",
-                "expect": "1970/01/01 08:00:00.000000+08:00 08AM A.D. 70 Jan January Thu Thursday"
+                "template": "{{0 :date \"yyyy/MM/dd HH:mm:ss.ffffffzzz hhtt g yy MMM MMMM ddd dddd K z zz F\"}}::{{\"2019-11-01 12:00:00\" :date \"yyyy/MM/dd hh:mm:ss\"}}::{{0 :date}}",
+                "expect": "1970/01/01 08:00:00.000000+08:00 08AM A.D. 70 Jan January Thu Thursday +08:00 +8 +08 ::2019/11/01 12:00:00::"
             }
         },
         "waterpipe()": {
@@ -1046,6 +1055,18 @@
                 "template": "<div><\">\"</div>",
                 "expect": "<div>&lt;&quot;&gt;&quot;</div>"
             },
+            "should not encode <!doctype>": {
+                "template": "<!doctype html><html></html>",
+                "expect": "<!doctype html><html></html>"
+            },
+            "should not encode in <script>": {
+                "template": "<script>if (1<a) a = \"</script>\"",
+                "expect": "<script>if (1<a) a = \"</script>&quot;"
+            },
+            "should not encode in <style>": {
+                "template": "<style>if (1<a) a = \"</style>\"",
+                "expect": "<style>if (1<a) a = \"</style>&quot;"
+            },
             "should preserve entities in text content": {
                 "template": "<div>&lt;</div>",
                 "expect": "<div>&lt;</div>"
@@ -1072,6 +1093,16 @@
                 "template": "{{.}}  {{.}}",
                 "expect": "foo foo"
             },
+            "should preserve all whitespace in <script>": {
+                "template": "<script>if (1<a) {}\r\n        \r\n\r\n\r\n\t\t\tconsole.log('     ')</script>",
+                "expect": "<script>if (1<a) {}\r\n        \r\n\r\n\r\n\t\t\tconsole.log('     ')</script>",
+                "options": { "indent": 2 }
+            },
+            "should preserve all whitespace in <style>": {
+                "template": "<style>if (1<a) {}\r\n        \r\n\r\n\r\n\t\t\tconsole.log('     ')</style>",
+                "expect": "<style>if (1<a) {}\r\n        \r\n\r\n\r\n\t\t\tconsole.log('     ')</style>",
+                "options": { "indent": 2 }
+            },
             "should throw error on mismatched template statement": {
                 "template": "{{foreach}}{{/if}}",
                 "exception": true
@@ -1080,6 +1111,51 @@
                 "template": "{{myGlobal noThisPipe}}",
                 "expect": "",
                 "warn": true
+            },
+            "should indent descendant elements by number of spaces if indent options is present": {
+                "template": "<div>\r\n<div>This is sample text</div>\r\n</div>",
+                "options": { "indent": 2 },
+                "expect": "<div>\r\n  <div>This is sample text</div>\r\n</div>"
+            },
+            "should indent descendant elements by given string if indent options is present": {
+                "template": "<div>\r\n<div>This is sample text</div>\r\n</div>",
+                "options": { "indent": "\t" },
+                "expect": "<div>\r\n\t<div>This is sample text</div>\r\n</div>"
+            },
+            "should ignore extra new lines and whitespaces": {
+                "template": "<div>\r\n \r\n<div>This is sample text</div>\r\n\r\n</div>",
+                "options": { "indent": 2 },
+                "expect": "<div>\r\n  <div>This is sample text</div>\r\n</div>"
+            },
+            "should ignore extra new lines around foreach loop": {
+                "template": "<div>\r\n \r\n{{foreach arrOfFib}}\r\n\r\n<div>{{.}}</div>\r\n\r\n{{/foreach}}\r\n\r\n</div>",
+                "options": { "indent": 2 },
+                "expect": "<div>\r\n  <div>1</div>\r\n  <div>1</div>\r\n  <div>2</div>\r\n  <div>3</div>\r\n  <div>5</div>\r\n  <div>8</div>\r\n</div>"
+            },
+            "should prepend number of spaces to every line of indentPadding options is present": {
+                "template": "<div>\r\n<div>This is sample text</div>\r\n</div>",
+                "options": { "indent": 2, "indentPadding": 2 },
+                "expect": "  <div>\r\n    <div>This is sample text</div>\r\n  </div>"
+            },
+            "should prepend given string to every line of indentPadding options is present": {
+                "template": "<div>\r\n<div>This is sample text</div>\r\n</div>",
+                "options": { "indent": 2, "indentPadding": "\t" },
+                "expect": "\t<div>\r\n\t  <div>This is sample text</div>\r\n\t</div>"
+            },
+            "should only acknowledge indentPadding option if indent option is present": {
+                "template": "<div></div>",
+                "options": { "indentPadding": 2 },
+                "expect": "<div></div>"
+            },
+            "should override formatting in input template": {
+                "template": "<a>\r\n       <b>1</b>\r\n</a>",
+                "options": { "indent": 2 },
+                "expect": "<a>\r\n  <b>1</b>\r\n</a>"
+            },
+            "should indent correctly with template inclusion": {
+                "template": "<div>\r\n{{myTemplateHTML}}\r\n</div>",
+                "options": { "indent": 2 },
+                "expect": "<div>\r\n  <a>\r\n    <b>myTemplateHTML</b>\r\n  </a>\r\n</div>"
             }
         },
         "waterpipe.eval()": {

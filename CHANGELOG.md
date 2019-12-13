@@ -1,3 +1,12 @@
+## v2.3.0 / 2019-12-14
+
+- Introduce `indent` and `indentPadding` options
+- Fix: Unexpected escaped character for `<!doctype>` and text inside `<script>` and `<style>`
+
+## v2.2.3 / 2019-11-15
+
+- Fix: whitespace characters stripped in HTML attributes
+
 ## v2.2.2 / 2019-09-12
 
 - Fix: whitespace characters stripped in non-HTML content
@@ -19,7 +28,12 @@
 
 ## v2.0.0 / 2017-03-20
 
-Introduce new feature
+- Changes to pipe argument interpretation (details in [Pipe Argument](https://github.com/misonou/waterpipe/wiki/Pipe#pipe-argument))
+- New special variables: `#key`, `#index`, `@root`, `@0`, `@1`, ...
+- New capabilities for variadic pipes
+- New built-in pipe functions: `pow`, `to`, `slice`, `unique`, `groupby`
+- `&&`, `||` and `|` constructs are now pipe functions, leveraging new variadic pipe capabilities
+- Fix incorrect output from `:date` pipe with `h`, `hh`, `t` or `tt` specifier
 
 ## v1.0.1 / 2017-01-12
 

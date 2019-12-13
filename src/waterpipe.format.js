@@ -233,7 +233,7 @@
         }
 
         function formatDate(date, format, translationsOverride) {
-            format = standardFormat[format] || format;
+            format = standardFormat[format] || format || '';
             translationsOverride = translationsOverride || {};
             var translations = {};
             for (var i in defaultTranslations) {
@@ -275,8 +275,6 @@
                     return translations.timeSeparator;
                 case '/':
                     return translations.dateSeparator;
-                default:
-                    return '';
                 }
             }
 

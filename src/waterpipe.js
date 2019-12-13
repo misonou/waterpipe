@@ -1,5 +1,5 @@
 /*!
- * Waterpipe JavaScript Template v2.2.3
+ * Waterpipe JavaScript Template v2.3.0
  *
  * The MIT License (MIT)
  *
@@ -57,7 +57,8 @@
     var TOKEN_ELSEIFNOT = 'elseif not';
     var TOKEN_FOREACH = 'foreach';
 
-    var VOID_TAGS = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
+    var NEWLINE = '\r\n';
+    var VOID_TAGS = 'area base br col command embed hr img input keygen link meta param source track wbr !doctype'.split(' ');
     var CONSTANTS = {
         'true': true,
         'false': false,
@@ -67,6 +68,7 @@
     };
 
     var evalCount = 0;
+    var execStack = [];
     var pipes = Object.create ? Object.create(null) : {};
 
     function cached(fn, str) {
@@ -172,6 +174,17 @@
 
     function string(value, stringify) {
         return !evallable(value) || value !== value || isFunction(value) ? '' : isString(value) ? value : (stringify || String)(value);
+    }
+
+    function repeat(str, count) {
+        return new Array((+count || 0) + 1).join(string(str));
+    }
+
+    function indent(str, level, start) {
+        if (typeof str === 'number') {
+            str = repeat(' ', str);
+        }
+        return (start || '') + repeat(str, level);
     }
 
     function parseRegExp(str) {
@@ -403,7 +416,7 @@
     function parse(str) {
         var tokens = [];
         var controlStack = [{}];
-        var htmlStack = [{}];
+        var htmlStack = [];
         var lastIndex = 0;
         var m, r = /\{\{([\/!]|foreach(?=\s|\})|if(?:\snot)?(?=\s)|else(?:if(?:\snot)?(?=\s))?|&?(?!\}))\s*((?:\}(?!\})|[^}])*)\}\}/g;
 
@@ -424,32 +437,58 @@
 
         function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([0-9a-z]+)|\/?>|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"/ig;
+            var m, r = /<(\/?)([0-9a-z]+|!doctype)|\/?>|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|\r?\n\s*/ig;
             var lastIndex = 0;
+
+            function isScriptOrStyle() {
+                return htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style';
+            }
 
             function shiftHtmlStack() {
                 return htmlStack.length > (controlStack[0].htmlStackCount || 1) && htmlStack.shift();
             }
 
             function writeText(str, stripWS) {
+                if (isScriptOrStyle()){
+                    tokens.push({
+                        op: OP_TEXT,
+                        value: str
+                    });
+                    return;
+                }
                 if (stripWS || htmlStack[0].attrName || htmlStack[0].opened) {
-                    str = stripWS || htmlStack[0].attrName ? str : escape(str.replace(/\s+/g, htmlStack[0].opened ? ' ' : ''), true);
-                    if (str && (htmlStack[1] || str != ' ')) {
-                        var last1 = tokens[tokens.length - 1];
-                        var last2 = tokens[tokens.length - 2];
+                    var last1 = tokens[tokens.length - 1];
+                    var last2 = tokens[tokens.length - 2];
+                    var newline;
+                    if (!stripWS) {
+                        newline = str.indexOf('\n') >= 0;
+                        str = escape(str.replace(/\s+/g, htmlStack[0].opened || (htmlStack[0].attrName && htmlStack[0].text) ? ' ' : ''), true);
+                        newline &= (!str || str === ' ');
+                    }
+                    htmlStack[0].text += str;
+                    if (newline) {
+                        last1.stripWSEnd = false;
+                        tokens.push({
+                            op: OP_SPACE,
+                            value: NEWLINE
+                        });
+                    } else if (str && ((htmlStack[1] && htmlStack[0].opened) || str !== ' ')) {
                         if (tokens.length > start && last1.op === OP_TEXT) {
                             last1.value += str;
-                        } else if (tokens.length > start + 1 && last2.op === OP_TEXT) {
+                            last1.stripWSEnd = stripWS;
+                        } else if (tokens.length > start + 1 && last2.op === OP_TEXT && last1.value !== NEWLINE) {
                             last2.value += (stripWS || last2.stripWSEnd ? '' : last1.value) + str;
+                            last2.stripWSEnd = stripWS;
                             tokens.pop();
                         } else {
                             tokens.push({
                                 op: OP_TEXT,
                                 stripWS: stripWS,
-                                value: str
+                                stripWSEnd: stripWS,
+                                value: str,
+                                indent: htmlStack.length - 2 + !!htmlStack[0].opened
                             });
                         }
-                        tokens[tokens.length - 1].stripWSEnd = stripWS;
                     } else {
                         tokens.push({
                             op: OP_SPACE,
@@ -467,20 +506,26 @@
 
                 switch (m[0].charAt(0)) {
                     case '<':
-                        while (VOID_TAGS.indexOf((htmlStack[0].tagName || '').toLowerCase()) >= 0 && shiftHtmlStack());
-                        if (m[1]) {
-                            if (htmlStack[0].tagName !== m[2] || htmlStack.length <= (controlStack[0].htmlStackCount || 1)) {
-                                htmlStack[0].muteTagEnd = true;
-                                htmlStack[0].opened = undefined;
-                            } else {
-                                writeText(m[0], true);
-                                htmlStack[0].opened = false;
-                            }
-                        } else {
-                            htmlStack.unshift({
-                                tagName: m[2]
-                            });
+                        if (isScriptOrStyle() && (!m[1] || m[2].toLowerCase() !== htmlStack[0].tagName)) {
                             writeText(m[0], true);
+                        } else {
+                            while (VOID_TAGS.indexOf(htmlStack[0].tagName) >= 0 && shiftHtmlStack());
+                            if (m[1]) {
+                                if (htmlStack[0].tagName !== m[2] || htmlStack.length <= (controlStack[0].htmlStackCount || 1)) {
+                                    htmlStack[0].muteTagEnd = true;
+                                    htmlStack[0].opened = undefined;
+                                } else {
+                                    htmlStack[0].opened = false;
+                                    writeText(m[0], true);
+                                }
+                            } else {
+                                htmlStack.unshift({
+                                    tagName: m[2].toLowerCase(),
+                                    text: ''
+                                });
+                                writeText(m[0].toLowerCase(), true);
+                                htmlStack[0].index = tokens.length - 1;
+                            }
                         }
                         continue;
                     case '>':
@@ -505,12 +550,13 @@
                         break;
                     default:
                         if (htmlStack[0].tagName && !htmlStack[0].opened) {
+                            writeText(' ' + m[0], true);
                             if (m[0].indexOf('=') >= 0) {
                                 htmlStack.unshift({
-                                    attrName: m[3]
+                                    attrName: m[3],
+                                    text: ''
                                 });
                             }
-                            writeText(' ' + m[0], true);
                             continue;
                         }
                 }
@@ -520,12 +566,18 @@
                 writeText(str.substr(lastIndex));
             }
             while (htmlStack[htmlStackCount]) {
-                writeText('</' + htmlStack.shift().tagName + '>', true);
+                var tagName = htmlStack.shift().tagName;
+                if (VOID_TAGS.indexOf(tagName) < 0) {
+                    writeText('</' + tagName + '>', true);
+                }
             }
         }
 
         str = string(str).replace(/^\s+|\s+$/g, '');
-        htmlStack[0].opened = true;
+        htmlStack.unshift({
+            opened: true,
+            text: ''
+        });
         while ((m = r.exec(str)) !== null) {
             if (lastIndex !== m.index) {
                 parseHTML(str.substring(lastIndex, m.index));
@@ -607,11 +659,19 @@
                     tokens.push({
                         op: OP_EVAL,
                         expression: parsePipe(m[2]),
-                        noescape: m[1] === '&'
+                        noescape: m[1] === '&',
+                        indent: htmlStack.length - 1
                     });
             }
         }
         parseHTML(str.substr(lastIndex), 1);
+        for (var i = tokens.length - 1, j = 0; i >= 0; i--) {
+            if (tokens[i].indent !== undefined) {
+                j = tokens[i].indent;
+            } else {
+                tokens[i].indent = j;
+            }
+        }
         tokens.value = str;
         return tokens;
     }
@@ -783,7 +843,10 @@
                             }
                         }
                     } else if (isString(func)) {
-                        value = run(func, value, options);
+                        value = run(func, value, extend({}, options, {
+                            indentPadding: undefined,
+                            trimStart: true
+                        }));
                     } else if (startpos === resetPos) {
                         value = pipe[i - 1].canEvaluate === false ? pipe[i - 1].value : undefined;
                     } else {
@@ -800,8 +863,10 @@
             var i = options.start || 0;
             var e = options.end || tokens.length;
             var ws = false;
+            execStack.unshift(options);
             while (i < e) {
                 var t = tokens[i++];
+                options.level = t.indent;
                 switch (t.op) {
                     case OP_EVAL:
                         var prevCount = evalCount;
@@ -839,7 +904,18 @@
                         i = t.index;
                         break;
                     case OP_SPACE:
-                        ws = ws !== false ? t.value : undefined;
+                        if (ws === false) {
+                            ws = undefined;
+                        } else if (t.value === NEWLINE && options.indent) {
+                            var k = NEWLINE + indent(options.indent, t.indent, options.indentPadding);
+                            if (k.indexOf(output[output.length - 1]) === 0) {
+                                output.pop();
+                            }
+                            output.push(k);
+                            ws = undefined;
+                        } else {
+                            ws = t.value;
+                        }
                         break;
                     default:
                         if (ws && !t.stripWS) {
@@ -852,14 +928,21 @@
             }
         } finally {
             evalCount = (evalCount + !!outstr) & 0xFFFF;
+            execStack.shift();
+        }
+        if (options.indent && options.indentPadding && !options.trimStart) {
+            output.unshift(options.indentPadding);
         }
         return outstr === true ? output.join('') : result;
     }
 
     function run(str, data, options, outstr) {
         str = string(str || '');
-        options = options || {};
+        options = extend({}, waterpipe.defaultOptions, options || {});
         return evaluate(cached(parse, str), {
+            indent: evallable(options.indent) ? indent(options.indent, 1) : '',
+            indentPadding: evallable(options.indentPadding) ? indent(options.indentPadding, 1) : execStack[0] ? indent(execStack[0].indent, execStack[0].level, execStack[0].indentPadding) : '',
+            trimStart: options.trimStart,
             objStack: [data],
             globals: inherit(waterpipe.globals, options.globals)
         }, outstr);
@@ -869,6 +952,7 @@
         return run(str, data, options, true);
     }
 
+    waterpipe.defaultOptions = {};
     waterpipe.globals = {};
     waterpipe.string = string;
     waterpipe.eval = function (str, data, options) {
@@ -1008,7 +1092,7 @@
             return where(string(str).split(separator), pass);
         },
         repeat: function (count, str) {
-            return new Array((+count || 0) + 1).join(string(str));
+            return repeat(str, count);
         },
         upper: function (str) {
             return string(str).toUpperCase();

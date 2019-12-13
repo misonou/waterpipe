@@ -13,9 +13,20 @@ interface Waterpipe {
     eval(expression: string, data?: any, options?: WaterpipeOptions): any;
 
     /**
+     * Converts the given value to string using waterpipe's internal conversion.
+     * @param value Any value.
+     */
+    string(value: any): string;
+
+    /**
      * Defines global variables readable from all templates.
      */
     readonly globals: WaterpipeGlobal;
+
+    /**
+     * Sets default options used when options are not passed for template evaluation
+     */
+    readonly defaultOptions: WaterpipeOptions;
 
     /**
      * Defines pipe functions.
@@ -39,6 +50,19 @@ interface WaterpipeOptions {
      * Defines global variables readable in this evaluation.
      */
     globals?: WaterpipeGlobal;
+
+    /**
+     * Sets indentation of resulting HTML markup.
+     * Each level of nested elements will be indented by the specfied number of spaces or the specific sequence of characters.
+     * If either 0 or an empty string is specified, indentation is turned off as if this option is absent.
+     */
+    indent?: number | string;
+
+    /**
+     * Number of spaces or the specific sequence of characters that will be left padded to each line.
+     * This option is only effective if the indent option is present and not equal to 0 or an empty string.
+     */
+    indentPadding?: number | string;
 }
 
 interface WaterpipeGlobal {
@@ -54,7 +78,7 @@ declare namespace Waterpipe {
      * @returns Any value which will be treated as the input value of the next pipe function.
      */
     interface Pipe {
-        (this: WaterpipeGlobal, value: any, ...args): any;
+        (this: WaterpipeGlobal, value: any, ...args: any[]): any;
     }
 
     /**
@@ -136,6 +160,6 @@ declare namespace Waterpipe {
          * @param fallback A fallback function will intakes the next argument if there is no lambda expression.
          * @returns A function which when called, the lambda expression will be evaluated against the input arguments and the result is returned.
          */
-        fn(fallback?: (value) => any): ((value, index) => any) | null;
+        fn(fallback?: (value: any) => any): ((value: any, index: any) => any) | null;
     }
 }
