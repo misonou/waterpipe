@@ -1,3 +1,7 @@
+## v2.3.1 / 2019-12-16
+
+- Fix: HTML comment marker `<!-- -->` erroreously escaped
+
 ## v2.3.0 / 2019-12-14
 
 - Introduce `indent` and `indentPadding` options

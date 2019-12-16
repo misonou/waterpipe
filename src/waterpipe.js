@@ -58,7 +58,7 @@
     var TOKEN_FOREACH = 'foreach';
 
     var NEWLINE = '\r\n';
-    var VOID_TAGS = 'area base br col command embed hr img input keygen link meta param source track wbr !doctype'.split(' ');
+    var VOID_TAGS = 'area base br col command embed hr img input keygen link meta param source track wbr !doctype !--'.split(' ');
     var CONSTANTS = {
         'true': true,
         'false': false,
@@ -437,7 +437,7 @@
 
         function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([0-9a-z]+|!doctype)|\/?>|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|\r?\n\s*/ig;
+            var m, r = /<(\/?)([0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|\r?\n\s*/ig;
             var lastIndex = 0;
 
             function isScriptOrStyle() {
@@ -530,13 +530,14 @@
                         continue;
                     case '>':
                     case '/':
-                        if (htmlStack[0].tagName && (!htmlStack[0].opened || m[0] === '/>')) {
+                    case '-':
+                        if (htmlStack[0].tagName && (!htmlStack[0].opened || m[0] === '/>' || m[0] === '-->')) {
                             if (htmlStack[0].muteTagEnd) {
                                 htmlStack[0].muteTagEnd = false;
                             } else {
                                 writeText(m[0], true);
                             }
-                            if ((htmlStack[0].opened !== false && m[0] !== '/>') || !shiftHtmlStack()) {
+                            if ((htmlStack[0].opened !== false && m[0] !== '/>' && m[0] !== '-->') || !shiftHtmlStack()) {
                                 htmlStack[0].opened = true;
                             }
                             continue;
