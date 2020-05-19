@@ -1,6 +1,7 @@
 /node_modules/
 /coverage/
 /dev/
+.nyc_output
 .vscode
 .DS_Store
 /npm-debug.log
