@@ -421,6 +421,15 @@
         this.length = function () {};
     };
 
+    function parsePipe(str, index) {
+        var t = new Pipe(str, index || 0);
+        var n, r = /([^\s\\"]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"/ig;
+        while ((n = r.exec(str)) !== null) {
+            t.unshift(new PipeArgument(t[0], (n[2] !== undefined ? n[2] : n[0]).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
+        }
+        return t.reverse();
+    }
+
     function parse(str) {
         var tokens = [];
         var controlStack = [{}];
@@ -434,13 +443,8 @@
             }
         }
 
-        function parsePipe(str) {
-            var t = new Pipe(str, m.index + m[0].indexOf(str));
-            var n, r = /([^\s\\"]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"/ig;
-            while ((n = r.exec(str)) !== null) {
-                t.unshift(new PipeArgument(t[0], (n[2] !== undefined ? n[2] : n[0]).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
-            }
-            return t.reverse();
+        function getPipe(str) {
+            return parsePipe(str, m.index + m[0].indexOf(str));
         }
 
         function parseHTML(str, htmlStackCount) {
@@ -619,7 +623,7 @@
                         tokenName: TOKEN_IF,
                         token: {
                             op: OP_TEST,
-                            condition: parsePipe(m[2]),
+                            condition: getPipe(m[2]),
                             negate: m[1] === TOKEN_IFNOT
                         }
                     });
@@ -646,7 +650,7 @@
                     if (m[1] === TOKEN_ELSEIF || m[1] === TOKEN_ELSEIFNOT) {
                         controlStack[0].tokenIf = {
                             op: OP_TEST,
-                            condition: parsePipe(m[2]),
+                            condition: getPipe(m[2]),
                             negate: m[1] === TOKEN_ELSEIFNOT
                         };
                         tokens.push(controlStack[0].tokenIf);
@@ -659,7 +663,7 @@
                         tokenName: TOKEN_FOREACH,
                         token: {
                             op: OP_ITER,
-                            expression: parsePipe(m[2])
+                            expression: getPipe(m[2])
                         }
                     });
                     tokens.push(controlStack[0].token);
@@ -667,7 +671,7 @@
                 default:
                     tokens.push({
                         op: OP_EVAL,
-                        expression: parsePipe(m[2]),
+                        expression: getPipe(m[2]),
                         noescape: m[1] === '&',
                         indent: htmlStack.length - 1
                     });
@@ -953,16 +957,20 @@
         return outstr === true ? output.join('') : result;
     }
 
-    function run(str, data, options, outstr) {
-        str = string(str || '');
+    function getOptions(options, data) {
         options = extend({}, waterpipe.defaultOptions, options || {});
-        return evaluate(cached(parse, str), {
+        return {
             indent: evallable(options.indent) ? indent(options.indent, 1) : '',
             indentPadding: evallable(options.indentPadding) ? indent(options.indentPadding, 1) : execStack[0] ? indent(execStack[0].indent, execStack[0].level, execStack[0].indentPadding) : '',
             trimStart: options.trimStart,
             objStack: [data],
             globals: inherit(waterpipe.globals, options.globals)
-        }, outstr);
+        };
+    }
+
+    function run(str, data, options, outstr) {
+        str = string(str || '');
+        return evaluate(cached(parse, str), getOptions(options, data), outstr);
     }
 
     function waterpipe(str, data, options) {
@@ -973,7 +981,8 @@
     waterpipe.globals = {};
     waterpipe.string = string;
     waterpipe.eval = function (str, data, options) {
-        return run('{{' + str + '}}', data, options);
+        var tokens = [{ op: OP_EVAL, expression: cached(parsePipe, str) }];
+        return evaluate(tokens, getOptions(options, data));
     };
     waterpipe.pipes = extend(pipes, {
         __default__: constFn(),
