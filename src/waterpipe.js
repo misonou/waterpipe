@@ -449,7 +449,7 @@
             var lastIndex = 0;
 
             function isScriptOrStyle() {
-                return htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style';
+                return htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style' || htmlStack[0].tagName === '!--';
             }
 
             function shiftHtmlStack() {
@@ -558,7 +558,7 @@
                         }
                         break;
                     default:
-                        if (htmlStack[0].tagName && !htmlStack[0].opened) {
+                        if (htmlStack[0].tagName && htmlStack[0].tagName !== '!--' && !htmlStack[0].opened) {
                             writeText(' ' + m[0], true);
                             if (m[0].indexOf('=') >= 0) {
                                 htmlStack.unshift({
