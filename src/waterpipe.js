@@ -418,7 +418,7 @@
         var controlStack = [{}];
         var htmlStack = [];
         var lastIndex = 0;
-        var m, r = /\{\{([\/!]|foreach(?=\s|\})|if(?:\snot)?(?=\s)|else(?:if(?:\snot)?(?=\s))?|&?(?!\}))\s*((?:\}(?!\})|[^}])*)\}\}/g;
+        var m, r = /\{\{([\/!]|foreach(?=\s|\})|if(?:\snot)?(?=\s)|else(?:if(?:\snot)?(?=\s))?|&?(?!\}))\s*((?:\}(?!\})|[^}])*\}*)\}\}/g;
 
         function assert(result) {
             if (!result) {
