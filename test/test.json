@@ -388,6 +388,14 @@
             "#count should return 0 in context other than iteration": {
                 "template": "{{#count}}",
                 "expect": "0"
+            },
+            "@now should return current timestamp": {
+                "template": "{{@now != undefined}}",
+                "expect": "true"
+            },
+            "@today should return timestamp representing today's midnight": {
+                "template": "{{@today != undefined}}",
+                "expect": "true"
             }
         },
         "Pipe function": {
@@ -655,6 +663,10 @@
             },
             "not": {
                 "template": "{{false not}}:{{not true}}",
+                "expect": "true:false"
+            },
+            "!!": {
+                "template": "{{1 !!}}:{{[ !! 0 ]}}",
                 "expect": "true:false"
             },
             "??": {
@@ -988,6 +1000,10 @@
                 "template": "{{\"one\" in numbers}}:{{\"zero\" in numbers}}",
                 "expect": "true:false"
             },
+            "in non-objects": {
+                "template": "{{\"one\" in null}}:{{\"0\" in 0}}:{{\"0\" in \"abc\"}}",
+                "expect": "false:false:false"
+            },
             "length": {
                 "template": "{{length}}:{{\"foo\" length}}:{{arrOfFib length}}",
                 "expect": "0:3:6"
@@ -1018,6 +1034,10 @@
             "should return exact string if there is no pipe": {
                 "template": "foobar",
                 "expect": "foobar"
+            },
+            "should allow trailing curly bracket in expression": {
+                "template": "{{\"\" & }}}",
+                "expect": "}"
             },
             "should tolerate unmatched closing tag": {
                 "template": "<div><b></div></b>",
@@ -1066,6 +1086,10 @@
             "should not encode in <style>": {
                 "template": "<style>if (1<a) a = \"</style>\"",
                 "expect": "<style>if (1<a) a = \"</style>&quot;"
+            },
+            "should not encode HTML comments": {
+                "template": "<!-- This is HTML comments & -->",
+                "expect": "<!-- This is HTML comments & -->"
             },
             "should preserve entities in text content": {
                 "template": "<div>&lt;</div>",
@@ -1163,6 +1187,11 @@
                 "func": "eval",
                 "template": "arrOfFib where [ even ]",
                 "expect": [2, 8]
+            },
+            "should correctly evaluate pipe starting with characters otherwise has special meaning in {{pipe}} form": {
+                "func": "eval",
+                "template": "! 0",
+                "expect": true
             }
         }
     }
