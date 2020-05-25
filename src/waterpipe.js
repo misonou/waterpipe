@@ -49,6 +49,8 @@
     var EVAL_ITER_INDEX = 3;
     var EVAL_ITER_COUNT = 4;
     var EVAL_GLOBAL = 5;
+    var EVAL_NOW = 6;
+    var EVAL_TODAY = 7;
 
     var TOKEN_IF = 'if';
     var TOKEN_IFNOT = 'if not';
@@ -223,6 +225,12 @@
                 break;
             case '@global':
                 t.evalMode = EVAL_GLOBAL;
+                break;
+            case '@now':
+                t.evalMode = EVAL_NOW;
+                break;
+            case '@today':
+                t.evalMode = EVAL_TODAY;
                 break;
             default:
                 if (/^@(\d+)$/.test(t[0])) {
@@ -711,6 +719,14 @@
                     break;
                 case EVAL_GLOBAL:
                     value = options.globals;
+                    break;
+                case EVAL_NOW:
+                    value = +new Date();
+                    break;
+                case EVAL_TODAY:
+                    value = new Date();
+                    value.setHours(0, 0, 0, 0);
+                    value = +value;
                     break;
                 default:
                     var name = Array.isArray(objectPath[0]) ? string(evaluateObjectPath(objectPath[0])) : objectPath[0];
