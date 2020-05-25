@@ -1219,7 +1219,7 @@
         },
         in: function (value, varargs) {
             var b = varargs.next(true);
-            return Array.isArray(b) ? b.indexOf(value) >= 0 : typeof b === 'object' && value in b;
+            return Array.isArray(b) ? b.indexOf(value) >= 0 : !!b && typeof b === 'object' && value in b;
         },
         '??': function (a, b) {
             return a !== null && a !== undefined ? a : b;
