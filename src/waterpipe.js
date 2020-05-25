@@ -1240,6 +1240,9 @@
         '??': function (a, b) {
             return a !== null && a !== undefined ? a : b;
         },
+        '!!': function (obj, varargs) {
+            return !!(varargs.hasArgs() ? varargs.next() : obj);  
+        },
         '&&': function (value, varargs) {
             return value ? varargs.reset() : varargs.stop();
         },
@@ -1251,10 +1254,10 @@
             return varargs.reset();
         }
     });
-    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
+    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all none sum map test not sortby groupby replace as let in && || |'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
