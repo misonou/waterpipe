@@ -51,6 +51,7 @@
     var EVAL_GLOBAL = 5;
     var EVAL_NOW = 6;
     var EVAL_TODAY = 7;
+    var EVAL_RAND = 8;
 
     var TOKEN_IF = 'if';
     var TOKEN_IFNOT = 'if not';
@@ -231,6 +232,9 @@
                 break;
             case '@today':
                 t.evalMode = EVAL_TODAY;
+                break;
+            case '@random':
+                t.evalMode = EVAL_RAND;
                 break;
             default:
                 if (/^@(\d+)$/.test(t[0])) {
@@ -731,6 +735,9 @@
                     value = new Date();
                     value.setHours(0, 0, 0, 0);
                     value = +value;
+                    break;
+                case EVAL_RAND:
+                    value = Math.random();
                     break;
                 default:
                     var name = Array.isArray(objectPath[0]) ? string(evaluateObjectPath(objectPath[0])) : objectPath[0];
