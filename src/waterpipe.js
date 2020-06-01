@@ -989,6 +989,7 @@
     waterpipe.string = string;
     waterpipe.eval = function (str, data, options) {
         var tokens = [{ op: OP_EVAL, expression: cached(parsePipe, str) }];
+        tokens.value = str;
         return evaluate(tokens, getOptions(options, data));
     };
     waterpipe.pipes = extend(pipes, {
