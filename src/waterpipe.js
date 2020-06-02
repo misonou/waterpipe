@@ -1163,15 +1163,27 @@
         pow: function (a, b) {
             return Math.pow(+a || 0, +b || 0);
         },
-        to: function (start, end) {
-            start = +start || 0;
-            end = +end || 0;
+        to: function (a, b) {
+            var start = +a;
+            var end = +b;
+            var pattern;
+            if (isNaN(start) || isNaN(end)) {
+                var re = /(-?(?:(?:\d+|\d*\.\d+)(?:[E|e][+|-]?\d+)?))/;
+                pattern = string(a).replace(re, '0');
+                start = +RegExp.$1;
+                if (string(b).replace(re, '0') !== pattern) {
+                    return [a];
+                }
+                end = +RegExp.$1;
+            }
+            start = start || 0;
+            end = end || 0;
             var arr = [];
             var step = (end - start) / Math.abs(end - start);
             for (; (end - start) / step > 0; start += step) {
-                arr.push(start);
+                arr.push(pattern ? pattern.replace('0', start) : start);
             }
-            arr.push(end);
+            arr.push(pattern ? pattern.replace('0', end) : end);
             return arr;
         },
         join: function (arr, str) {
