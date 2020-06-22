@@ -190,6 +190,10 @@
         return (start || '') + repeat(str, level);
     }
 
+    function reverseIndex(v, i) {
+        return ((v || '').length || 0) - (+i || 0) - 1;
+    }
+
     function parseRegExp(str) {
         return str.charAt(0) === '/' && /\/((?![*+?])(?:[^\r\n\[/\\]|\\.|\[(?:[^\r\n\]\\]|\\.)*\])+)\/((?:g(?:im?|mi?)?|i(?:gm?|mg?)?|m(?:gi?|ig?)?)?)/g.test(str) && new RegExp(RegExp.$1, RegExp.$2);
     }
@@ -198,7 +202,7 @@
         var t = [];
         var m, r = /((?!^)\$)?([^$.()][^.]*)|\$\(([^)]+)\)/ig;
         while ((m = r.exec(str)) !== null) {
-            t.push(m[1] || m[3] ? cached(parseObjectPath, m[3] || m[2]) : m[2]);
+            t.push(m[1] || m[3] ? cached(parseObjectPath, m[3] || m[2]) : m[2][0] === '^' ? { fn: reverseIndex, arg: m[2].slice(1) } : m[2]);
         }
         if (!t.length) {
             t[0] = str;
@@ -427,9 +431,9 @@
 
     function parsePipe(str, index) {
         var t = new Pipe(str, index || 0);
-        var n, r = /([^\s\\"]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"/ig;
+        var n, r = /([^\s\\"`]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"|`(\S+)/ig;
         while ((n = r.exec(str)) !== null) {
-            t.unshift(new PipeArgument(t[0], (n[2] !== undefined ? n[2] : n[0]).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
+            t.unshift(new PipeArgument(t[0], (n[3] || (n[2] !== undefined ? n[2] : n[0])).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
         }
         return t.reverse();
     }
@@ -708,6 +712,16 @@
             return objStack[index] instanceof Iterable ? objStack[index].values[objStack[index].keys[iteratorStack[index]]] : objStack[index];
         }
 
+        function evaluateObjectPathPart(p, value) {
+            if (Array.isArray(p)) {
+                return string(evaluateObjectPath(p));
+            }
+            if (typeof p === 'object') {
+                return p.fn(value, p.arg);
+            }
+            return p;
+        }
+
         function evaluateObjectPath(objectPath, acceptShorthand) {
             if (!objectPath || !objectPath[0]) {
                 evaluateObjectPath.valid = true;
@@ -740,7 +754,7 @@
                     value = Math.random();
                     break;
                 default:
-                    var name = Array.isArray(objectPath[0]) ? string(evaluateObjectPath(objectPath[0])) : objectPath[0];
+                    var name = evaluateObjectPathPart(objectPath[0], value);
                     for (var j = 0, length = objStack.length; j < length; j++) {
                         value = objAt(j);
                         if (hasProperty(value, name)) {
@@ -757,7 +771,7 @@
                     value = value[name];
             }
             for (var i = 1, len = objectPath.length; i < len && evallable(value); i++) {
-                value = value[Array.isArray(objectPath[i]) ? string(evaluateObjectPath(objectPath[i])) : objectPath[i]];
+                value = value[evaluateObjectPathPart(objectPath[i], value)];
             }
             evaluateObjectPath.valid = valid;
             return isFunction(value) ? undefined : value;
