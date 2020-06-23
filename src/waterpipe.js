@@ -1246,7 +1246,7 @@
             var result;
             var fn = varargs.fn() || ((result = varargs.next()), varargs.fn() || (varargs.hasArgs() ? detectKeyFn(varargs, arr) : pass));
             each(arr, function (i, v) {
-                result = result ? result + fn(v, i) : fn(v, i);
+                result = result !== undefined ? result + fn(v, i) : fn(v, i);
             });
             return result;
         },
