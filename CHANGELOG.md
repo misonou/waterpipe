@@ -1,3 +1,15 @@
+## v2.4.0 / 2020-06-29
+
+- Add reverse indexing accessor (`^0` gets last element, `^1` gets second-last, etc)
+- Add new special variables `@now`, `@today`, `@random`
+- New pipe functions `!!` and new alias `?:` and `&`
+- `to` (`..`) pipe now enumerates through numbers embedded in strings (`a0 .. a2` yields 'a0', 'a1' and 'a2')
+- Fix: `waterpipe.eval()` when input template starts with `&` or `!`
+- Fix: parse issue with trailing closing curly bracket (`}}}`)
+- Fix: exception from pipe function `in`
+- Fix: `sum` returns incorrect values
+- Fix: whitespace stripped in HTML comments
+
 ## v2.3.1 / 2019-12-16
 
 - Fix: HTML comment marker `<!-- -->` erroreously escaped

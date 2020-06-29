@@ -67,8 +67,15 @@
                 "input": {
                     "array": [1, 2, 3]
                 },
-                "template": "{{array.0}}",
-                "expect": "1"
+                "template": "{{array.0}}:{{array.1}}:{{array.2}}",
+                "expect": "1:2:3"
+            },
+            "should resolve array element using reverse indexer": {
+                "input": {
+                    "array": [1, 2, 3]
+                },
+                "template": "{{array.^0}}:{{array.^1}}:{{array.^2}}",
+                "expect": "3:2:1"
             },
             "should evaluate property name": {
                 "input": {
