@@ -1181,10 +1181,12 @@
             var start = +a;
             var end = +b;
             var pattern;
+            var numDigit;
             if (isNaN(start) || isNaN(end)) {
-                var re = /(-?(?:(?:\d+|\d*\.\d+)(?:[E|e][+|-]?\d+)?))/;
+                var re = /(\d+|\d*\.\d+)/;
                 pattern = string(a).replace(re, '0');
                 start = +RegExp.$1;
+                numDigit = RegExp.$1.length;
                 if (string(b).replace(re, '0') !== pattern) {
                     return [a];
                 }
@@ -1194,10 +1196,14 @@
             end = end || 0;
             var arr = [];
             var step = (end - start) / Math.abs(end - start);
+            var format = function (n) {
+                var m = Math.abs(n).toString();
+                return m.length < numDigit ? new Array(numDigit - m.length + 1).join('0') + m : m;
+            };
             for (; (end - start) / step > 0; start += step) {
-                arr.push(pattern ? pattern.replace('0', start) : start);
+                arr.push(pattern ? pattern.replace('0', format(start)) : start);
             }
-            arr.push(pattern ? pattern.replace('0', end) : end);
+            arr.push(pattern ? pattern.replace('0', format(end)) : end);
             return arr;
         },
         join: function (arr, str) {
