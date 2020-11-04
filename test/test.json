@@ -830,6 +830,11 @@
                 "template": "{{3 .. 0}}",
                 "expect": "[3,2,1,0]"
             },
+            "to string pattern": {
+                "func": "eval",
+                "template": "`s-08 .. `s-10",
+                "expect": ["s-08", "s-09", "s-10"]
+            },
             "join": {
                 "template": "{{arrOfFib join ,}}",
                 "expect": "1,1,2,3,5,8"
