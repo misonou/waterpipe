@@ -859,6 +859,14 @@
                 "template": "{{numbers where [ even ]}}",
                 "expect": "{&quot;two&quot;:2,&quot;four&quot;:4}"
             },
+            "where of undefined": {
+                "template": "{{undefined where [ even ]}}",
+                "expect": ""
+            },
+            "where of null": {
+                "template": "{{null where [ even ]}}",
+                "expect": ""
+            },
             "where key": {
                 "input": {
                     "key": "even",
@@ -987,6 +995,14 @@
             "sortby of object": {
                 "template": "{{numbers sortby [ even ]}}",
                 "expect": "{&quot;one&quot;:1,&quot;three&quot;:3,&quot;five&quot;:5,&quot;two&quot;:2,&quot;four&quot;:4}"
+            },
+            "sortby of undefined": {
+                "template": "{{undefined sortby [ even ]}}",
+                "expect": ""
+            },
+            "sortby of null": {
+                "template": "{{null sortby [ even ]}}",
+                "expect": ""
             },
             "groupby fn": {
                 "template": "{{arrOfFib groupby [ even ]}}",

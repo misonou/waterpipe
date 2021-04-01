@@ -338,6 +338,9 @@
     }
 
     function where(arr, filter, map) {
+        if (!evallable(arr)) {
+            return arr;
+        }
         var result = Array.isArray(arr) ? [] : {};
         each(arr, function (i, v) {
             if (filter(v, i)) {
@@ -1257,6 +1260,9 @@
             return result;
         },
         sortby: function (arr, varargs) {
+            if (!evallable(arr)) {
+                return arr;
+            }
             var result = Array.isArray(arr) ? new Array(arr.length) : {};
             var fn = detectKeyFn(varargs, arr);
             var tmp = [];
