@@ -1,3 +1,8 @@
+## v2.4.1 / 2021-07-02
+
+- Fix: `to` (`..`) pipe should handle zero-padding and minus sign
+- Fix: `where` and `sortby` should return `undefined` or `null` when given such values
+
 ## v2.4.0 / 2020-06-29
 
 - Add reverse indexing accessor (`^0` gets last element, `^1` gets second-last, etc)
