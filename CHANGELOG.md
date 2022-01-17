@@ -1,3 +1,8 @@
+## v2.4.2 / 2022-01-17
+
+- Move all format pipes to main script
+- `waterpipe.with` is now no-op
+
 ## v2.4.1 / 2021-07-02
 
 - Fix: `to` (`..`) pipe should handle zero-padding and minus sign
