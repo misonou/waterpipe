@@ -484,9 +484,11 @@
                     var last1 = tokens[tokens.length - 1];
                     var last2 = tokens[tokens.length - 2];
                     var newline;
+                    var ostr = str;
                     if (!stripWS) {
                         newline = str.indexOf('\n') >= 0;
-                        str = escape(str.replace(/\s+/g, htmlStack[0].opened || (htmlStack[0].attrName && htmlStack[0].text) ? ' ' : ''), true);
+                        ostr = str = str.replace(/\s+/g, htmlStack[0].opened || (htmlStack[0].attrName && htmlStack[0].text) ? ' ' : '');
+                        str = escape(str, true);
                         newline &= (!str || str === ' ');
                     }
                     htmlStack[0].text += str;
@@ -500,10 +502,13 @@
                         var isTagEnd = str[str.length - 1] === '>';
                         if (tokens.length > start && last1.op === OP_TEXT) {
                             last1.value += str;
+                            last1.ovalue += ostr;
                             last1.isTagEnd = isTagEnd;
                             last1.stripWSEnd = stripWS;
                         } else if (tokens.length > start + 1 && last2.op === OP_TEXT && last1.value !== NEWLINE) {
-                            last2.value += ((str[0] === '<' || last2.isTagEnd || (!stripWS && !last2.stripWSEnd)) ? last1.value : '') + str;
+                            var ch = (str[0] === '<' || last2.isTagEnd || (!stripWS && !last2.stripWSEnd)) ? last1.value : '';
+                            last2.value += ch + str;
+                            last2.ovalue += ch + ostr;
                             last2.isTagEnd = isTagEnd;
                             last2.stripWSEnd = stripWS;
                             tokens.pop();
@@ -514,6 +519,7 @@
                                 stripWSEnd: stripWS,
                                 isTagEnd: isTagEnd,
                                 value: str,
+                                ovalue: ostr,
                                 indent: htmlStack.length - 2 + !!htmlStack[0].opened
                             });
                         }
@@ -971,7 +977,7 @@
                         if (ws && !t.stripWS) {
                             output.push(ws);
                         }
-                        output.push(t.value);
+                        output.push(options.noEncode ? t.ovalue : t.value);
                         outstr = true;
                         ws = t.stripWSEnd ? false : undefined;
                 }
@@ -989,6 +995,7 @@
     function getOptions(options, data) {
         options = extend({}, waterpipe.defaultOptions, options || {});
         return {
+            noEncode: options.noEncode,
             indent: evallable(options.indent) ? indent(options.indent, 1) : '',
             indentPadding: evallable(options.indentPadding) ? indent(options.indentPadding, 1) : execStack[0] ? indent(execStack[0].indent, execStack[0].level, execStack[0].indentPadding) : '',
             trimStart: options.trimStart,

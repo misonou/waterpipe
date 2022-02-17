@@ -1103,6 +1103,15 @@
                 "template": "<div><\">\"</div>",
                 "expect": "<div>&lt;&quot;&gt;&quot;</div>"
             },
+            "should encode special characters not within a tag": {
+                "template": "&'\"<div></div>&'\"",
+                "expect": "&amp;&#39;&quot;<div></div>&amp;&#39;&quot;"
+            },
+            "should not encode special characters not within a tag when noEncode flag is true": {
+                "template": "&'\"<div></div>&'\"",
+                "options": { "noEncode": true },
+                "expect": "&'\"<div></div>&'\""
+            },
             "should not encode <!doctype>": {
                 "template": "<!doctype html><html></html>",
                 "expect": "<!doctype html><html></html>"

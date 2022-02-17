@@ -63,6 +63,12 @@ interface WaterpipeOptions {
      * This option is only effective if the indent option is present and not equal to 0 or an empty string.
      */
     indentPadding?: number | string;
+
+    /**
+     * Suppress encoding reserved HTML characters, including ', ", &, < and >.
+     * Useful for templated text that contains no HTML and could be escaped later on.
+     */
+    noEncode?: boolean;
 }
 
 interface WaterpipeGlobal {
