@@ -497,11 +497,14 @@
                             value: NEWLINE
                         });
                     } else if (str && ((htmlStack[1] && htmlStack[0].opened) || str !== ' ')) {
+                        var isTagEnd = str[str.length - 1] === '>';
                         if (tokens.length > start && last1.op === OP_TEXT) {
                             last1.value += str;
+                            last1.isTagEnd = isTagEnd;
                             last1.stripWSEnd = stripWS;
                         } else if (tokens.length > start + 1 && last2.op === OP_TEXT && last1.value !== NEWLINE) {
-                            last2.value += (stripWS || last2.stripWSEnd ? '' : last1.value) + str;
+                            last2.value += ((str[0] === '<' || last2.isTagEnd || (!stripWS && !last2.stripWSEnd)) ? last1.value : '') + str;
+                            last2.isTagEnd = isTagEnd;
                             last2.stripWSEnd = stripWS;
                             tokens.pop();
                         } else {
@@ -509,6 +512,7 @@
                                 op: OP_TEXT,
                                 stripWS: stripWS,
                                 stripWSEnd: stripWS,
+                                isTagEnd: isTagEnd,
                                 value: str,
                                 indent: htmlStack.length - 2 + !!htmlStack[0].opened
                             });

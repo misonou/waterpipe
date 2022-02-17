@@ -1131,6 +1131,10 @@
                 "template": " <div></div> ",
                 "expect": "<div></div>"
             },
+            "should not trim whitespace characters between text and tag": {
+                "template": "This is <div>sample</div> text",
+                "expect": "This is <div>sample</div> text"
+            },
             "should collapse multiple whitespace characters between text contents": {
                 "template": "<div class=\"  class-a  class-b  \">  This  is  sample  text  </div>",
                 "expect": "<div class=\"class-a class-b\"> This is sample text </div>"
