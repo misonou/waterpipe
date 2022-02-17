@@ -10,14 +10,6 @@ For simplest case in HTML, include using `<script>` tags:
 
 ```html
 <script type="text/javascript" src="waterpipe.js"></script>
-<script type="text/javascript" src="waterpipe.format.js"></script><!-- Register additional pipe function -->
-```
-
-For Node.js, use `require()` and optionally `with` additional pipe functions:
-
-```javascript
-var waterpipe = require('waterpipe');
-var waterpipe = require('waterpipe').with('format'); // Register additional pipe function
 ```
 
 # Usage
@@ -30,10 +22,24 @@ waterpipe('The value is {{value}}.', { value: 1 }); // The value is 1.
 
 ### Options
 
-```javascript
-{
-    // global variables that are available anywhere in the template
-    // variables declared here will override those in waterpipe.globals
-    globals: {}
-}
-```
+#### `globals`
+
+Defines global variables readable in this evaluation.
+Variables declared here will override those in `waterpipe.globals`.
+
+#### `indent`
+
+Sets indentation of resulting HTML markup.
+
+Each level of nested elements will be indented by the specfied number of spaces or the specific sequence of characters.
+If either `0` or an empty string is specified, indentation is turned off as if this option is absent.
+
+#### `indentPadding`
+
+Number of spaces or the specific sequence of characters that will be left padded to each line.
+This option is only effective if the indent option is present and not equal to `0` or an empty string.
+
+#### `noEncode`
+
+Suppress encoding reserved HTML characters, including `'`, `"`, `&`, `<` and `>`.
+Useful for templated text that contains no HTML and could be escaped later on.

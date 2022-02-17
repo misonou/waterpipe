@@ -1,3 +1,8 @@
+## v2.5.0 / 2022-02-17
+
+- Add `noEncode` option
+- Fix: spaces around tags are not preserved
+
 ## v2.4.2 / 2022-01-17
 
 - Move all format pipes to main script
