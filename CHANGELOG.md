@@ -1,3 +1,7 @@
+## v2.5.1 / 2022-02-18
+
+- Fix: `noEncode` should apply to pipe evaluation result
+
 ## v2.5.0 / 2022-02-17
 
 - Add `noEncode` option
