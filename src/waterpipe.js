@@ -933,7 +933,7 @@
                                 output.push(ws);
                             }
                             ws = undefined;
-                            output.push((evalCount !== prevCount || t.noescape ? pass : escape)(string(result, json)));
+                            output.push((evalCount !== prevCount || t.noescape || options.noEncode ? pass : escape)(string(result, json)));
                         }
                         break;
                     case OP_ITER:

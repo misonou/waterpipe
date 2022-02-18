@@ -196,6 +196,12 @@
                 "template": "{{&.}}",
                 "expect": "\"&'<>"
             },
+            "should suppress entity escape when noEncode is true": {
+                "input": "\"&'<>",
+                "template": "{{.}}",
+                "options": { "noEncode": true },
+                "expect": "\"&'<>"
+            },
             "should output JSON with object": {
                 "input": {
                     "prop": 1
