@@ -1327,7 +1327,7 @@
         },
         ':date': function (obj, format) {
             var date = obj instanceof Date ? obj : typeof obj === 'number' ? new Date(obj) : new Date(Date.parse(obj));
-            return internals.formatDate(date, format, this.DATE_LABELS);
+            return isNaN(date) ? '' : internals.formatDate(date, format, this.DATE_LABELS);
         },
         ':printf': function (obj, format) {
             return internals.sprintf(format, obj);
