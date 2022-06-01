@@ -1,3 +1,7 @@
+## v2.5.2 / 2022-06-01
+
+- Fix: `:date` format pipe should return empty string for invalid date
+
 ## v2.5.1 / 2022-02-18
 
 - Fix: `noEncode` should apply to pipe evaluation result
