@@ -105,6 +105,14 @@
                 "template": "{{$$(key)}}",
                 "expect": "foobar"
             },
+            "should evaluate property name in first segment with single $ sign with parenthesis": {
+                "input": {
+                    "prop": "foobar",
+                    "key": "prop"
+                },
+                "template": "{{$(key)}}",
+                "expect": "foobar"
+            },
             "should return nothing on nonexistent path": {
                 "template": "{{arrOfFib.foobar}}",
                 "expect": ""
