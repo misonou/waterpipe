@@ -418,7 +418,7 @@
         }
     }
     PipeArgument.prototype.objectPath = function () {
-        return (this.objectPath = constFn(cached(parseObjectPath, this.textValue.replace(/^\$/, '')))).call();
+        return (this.objectPath = constFn(cached(parseObjectPath, this.textValue.replace(/^\$(?!\()/, '')))).call();
     };
     PipeArgument.prototype.length = function () {
         if (this.value === '[' && this.canEvaluate === undefined) {

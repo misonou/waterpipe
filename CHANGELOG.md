@@ -1,3 +1,7 @@
+## v2.5.3 / 2022-06-07
+
+- Fix: evaluate path starting with single $ sign followed by parenthesis as nested object path
+
 ## v2.5.2 / 2022-06-01
 
 - Fix: `:date` format pipe should return empty string for invalid date
