@@ -5,6 +5,7 @@
         "arrOfOdd": [1, 3, 5, 7, 9, 11],
         "arrOfEven": [2, 4, 6, 8, 10, 12],
         "arrOfFib": [1, 1, 2, 3, 5, 8],
+        "arrOfStr": ["b", "aa", "a", "B"],
         "arrOfFibObj": [{
             "value": 1,
             "even": false
@@ -995,8 +996,20 @@
                 "expect": "[1,2,3,5,8]"
             },
             "sort": {
-                "template": "{{arrOfFib sort}}",
-                "expect": "[1,1,2,3,5,8]"
+                "template": "{{arrOfFib sort}}:{{arrOfStr sort}}",
+                "expect": "[1,1,2,3,5,8]:[&quot;B&quot;,&quot;a&quot;,&quot;aa&quot;,&quot;b&quot;]"
+            },
+            "isort": {
+                "template": "{{arrOfStr isort}}",
+                "expect": "[&quot;a&quot;,&quot;aa&quot;,&quot;B&quot;,&quot;b&quot;]"
+            },
+            "rsort": {
+                "template": "{{arrOfFib rsort}}:{{arrOfStr rsort}}",
+                "expect": "[8,5,3,2,1,1]:[&quot;b&quot;,&quot;aa&quot;,&quot;a&quot;,&quot;B&quot;]"
+            },
+            "irsort": {
+                "template": "{{arrOfStr irsort}}",
+                "expect": "[&quot;b&quot;,&quot;B&quot;,&quot;aa&quot;,&quot;a&quot;]"
             },
             "sortby fn": {
                 "template": "{{arrOfFib sortby [ even ]}}",
@@ -1017,6 +1030,34 @@
             "sortby of null": {
                 "template": "{{null sortby [ even ]}}",
                 "expect": ""
+            },
+            "isortby fn": {
+                "template": "{{arrOfStr isortby [ . ]}}",
+                "expect": "[&quot;a&quot;,&quot;aa&quot;,&quot;B&quot;,&quot;b&quot;]"
+            },
+            "rsortby fn": {
+                "template": "{{arrOfFib rsortby [ even ]}}",
+                "expect": "[2,8,1,1,3,5]"
+            },
+            "rsortby key": {
+                "template": "{{arrOfFibObj rsortby even}}",
+                "expect": "[{&quot;value&quot;:2,&quot;even&quot;:true},{&quot;value&quot;:8,&quot;even&quot;:true},{&quot;value&quot;:1,&quot;even&quot;:false},{&quot;value&quot;:1,&quot;even&quot;:false},{&quot;value&quot;:3,&quot;even&quot;:false},{&quot;value&quot;:5,&quot;even&quot;:false}]"
+            },
+            "rsortby of object": {
+                "template": "{{numbers rsortby [ even ]}}",
+                "expect": "{&quot;two&quot;:2,&quot;four&quot;:4,&quot;one&quot;:1,&quot;three&quot;:3,&quot;five&quot;:5}"
+            },
+            "rsortby of undefined": {
+                "template": "{{undefined sortby [ even ]}}",
+                "expect": ""
+            },
+            "rsortby of null": {
+                "template": "{{null sortby [ even ]}}",
+                "expect": ""
+            },
+            "irsortby fn": {
+                "template": "{{arrOfStr irsortby [ . ]}}",
+                "expect": "[&quot;b&quot;,&quot;B&quot;,&quot;aa&quot;,&quot;a&quot;]"
             },
             "groupby fn": {
                 "template": "{{arrOfFib groupby [ even ]}}",

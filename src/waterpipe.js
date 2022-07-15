@@ -72,8 +72,16 @@
 
     var evalCount = 0;
     var execStack = [];
+    var collator = typeof Intl !== 'undefined' && Intl.Collator && new Intl.Collator(undefined, { caseFirst: 'upper' });
     var pipes = Object.create ? Object.create(null) : {};
     var internals = {};
+
+    var compares = [
+        function (a, b) { return compare(a, b, 1); },
+        function (a, b) { return compare(a, b, 1, 1); },
+        function (a, b) { return compare(a, b, -1); },
+        function (a, b) { return compare(a, b, -1, 1); }
+    ];
 
     function cached(fn, str) {
         var cache = fn.cache = fn.cache || {};
@@ -370,15 +378,56 @@
         return keys;
     }
 
-    function compare(a, b) {
+    function compare(a, b, dir, ignoreCase) {
         if (Array.isArray(a) && Array.isArray(b)) {
             var result;
             for (var i = 0, len = Math.min(a.length, b.length); i < len && !result; i++) {
-                result = compare(a[i], b[i]);
+                result = compare(a[i], b[i], dir, ignoreCase);
             }
             return result || a.length - b.length;
         }
-        return a === b ? 0 : !evallable(a) || a < b ? -1 : !evallable(b) || a > b ? 1 : 0;
+        if (a === b) {
+            return 0;
+        }
+        var x = !evallable(a) && -1;
+        var y = !evallable(b) && 1;
+        if (x || y) {
+            return (x + y) * dir;
+        }
+        if (isString(a) || isString(b)) {
+            a = string(a);
+            b = string(b);
+            if (ignoreCase) {
+                /* istanbul ignore else */
+                if (collator) {
+                    return collator.compare(a, b) * dir;
+                } else {
+                    a = a.toLowerCase();
+                    b = b.toLowerCase();
+                }
+            }
+            return (a > b ? 1 : a < b ? -1 : 0) * dir;
+        }
+        return (a - b) * dir;
+    }
+
+    function sortby(arr, varargs, compare) {
+        if (!evallable(arr)) {
+            return arr;
+        }
+        var result = Array.isArray(arr) ? new Array(arr.length) : {};
+        var fn = detectKeyFn(varargs, arr);
+        var tmp = [];
+        each(arr, function (i, v) {
+            tmp.push([i, v, fn(v, i)]);
+        });
+        tmp.sort(function (a, b) {
+            return compare(a[2], b[2]);
+        });
+        each(tmp, function (i, v) {
+            result[arr.push ? i : v[0]] = v[1];
+        });
+        return result;
     }
 
     function inherit(base, values) {
@@ -1039,19 +1088,19 @@
             }
         },
         more: function (a, b) {
-            return (compare(a, b) > 0);
+            return (compare(a, b, 1) > 0);
         },
         less: function (a, b) {
-            return (compare(a, b) < 0);
+            return (compare(a, b, 1) < 0);
         },
         ormore: function (a, b) {
-            return (compare(a, b) >= 0);
+            return (compare(a, b, 1) >= 0);
         },
         orless: function (a, b) {
-            return (compare(a, b) <= 0);
+            return (compare(a, b, 1) <= 0);
         },
         between: function (a, b, c) {
-            return (compare(a, b) >= 0 && compare(a, c) <= 0);
+            return (compare(a, b, 1) >= 0 && compare(a, c, 1) <= 0);
         },
         equals: function (a, b) {
             return (string(a) === string(b));
@@ -1228,7 +1277,16 @@
             return [].concat(arr).reverse();
         },
         sort: function (arr) {
-            return [].concat(arr).sort(compare);
+            return [].concat(arr).sort(compares[0]);
+        },
+        isort: function (arr) {
+            return [].concat(arr).sort(compares[1]);
+        },
+        rsort: function (arr) {
+            return [].concat(arr).sort(compares[2]);
+        },
+        irsort: function (arr) {
+            return [].concat(arr).sort(compares[3]);
         },
         slice: function (arr, a, b) {
             return [].concat(arr).slice(a, b);
@@ -1272,21 +1330,16 @@
             return result;
         },
         sortby: function (arr, varargs) {
-            if (!evallable(arr)) {
-                return arr;
-            }
-            var result = Array.isArray(arr) ? new Array(arr.length) : {};
-            var fn = detectKeyFn(varargs, arr);
-            var tmp = [];
-            var j = 0;
-            each(arr, function (i, v) {
-                tmp.push([fn(v, i), ++j, i]);
-            });
-            tmp.sort(compare);
-            each(tmp, function (i, v) {
-                result[arr.push ? i : v[2]] = arr[v[2]];
-            });
-            return result;
+            return sortby(arr, varargs, compares[0]);
+        },
+        isortby: function (arr, varargs) {
+            return sortby(arr, varargs, compares[1]);
+        },
+        rsortby: function (arr, varargs) {
+            return sortby(arr, varargs, compares[2]);
+        },
+        irsortby: function (arr, varargs) {
+            return sortby(arr, varargs, compares[3]);
         },
         groupby: function (arr, varargs) {
             var result = {};
@@ -1336,7 +1389,7 @@
     ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all none sum map test not sortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
