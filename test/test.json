@@ -1110,6 +1110,18 @@
                 "expect": "1970/01/01 08:00:00.000000+08:00 08AM A.D. 70 Jan January Thu Thursday +08:00 +8 +08 ::2019/11/01 12:00:00::::"
             }
         },
+        "Date functions": {
+            "asdate": {
+                "input": "2019-01-01T00:00:00Z",
+                "template": "{{asdate + 0}}:{{1546300800000 asdate + 0}}:{{`undefined asdate}}",
+                "expect": "1546300800000:1546300800000:"
+            },
+            "addtime": {
+                "input": "2019-01-01",
+                "template": "{{addtime 1M :date yyyy-MM-dd}}:{{addtime -1M :date yyyy-MM-dd}}:{{addtime 1w :date yyyy-MM-dd}}:{{`undefined addtime}}",
+                "expect": "2019-02-01:2018-12-01:2019-01-08:"
+            }
+        },
         "waterpipe()": {
             "should return empty string for empty template": {
                 "expect": ""
