@@ -1,5 +1,5 @@
 /*!
- * Waterpipe JavaScript Template v2.5.0
+ * Waterpipe JavaScript Template v2.6.0
  *
  * The MIT License (MIT)
  *
@@ -72,8 +72,16 @@
 
     var evalCount = 0;
     var execStack = [];
+    var collator = typeof Intl !== 'undefined' && Intl.Collator && new Intl.Collator(undefined, { caseFirst: 'upper' });
     var pipes = Object.create ? Object.create(null) : {};
     var internals = {};
+
+    var compares = [
+        function (a, b) { return compare(a, b, 1); },
+        function (a, b) { return compare(a, b, 1, 1); },
+        function (a, b) { return compare(a, b, -1); },
+        function (a, b) { return compare(a, b, -1, 1); }
+    ];
 
     function cached(fn, str) {
         var cache = fn.cache = fn.cache || {};
@@ -85,6 +93,21 @@
             return CONSTANTS[str];
         }
         return /^(NaN|-?(?:(?:\d+|\d*\.\d+)(?:[E|e][+|-]?\d+)?|Infinity))$/.test(str) ? parseFloat(str) : str;
+    }
+
+    function asdate(obj) {
+        if (!evallable(obj) || obj instanceof Date) {
+            return obj;
+        }
+        if (typeof obj === 'number') {
+            return new Date(obj);
+        }
+        var str = string(obj);
+        obj = new Date(str);
+        if (!/\d{2}:\d{2}:\d{2}/.test(str)) {
+            obj.setHours(0, 0, 0, 0);
+        }
+        return obj;
     }
 
     function slice() {
@@ -370,15 +393,56 @@
         return keys;
     }
 
-    function compare(a, b) {
+    function compare(a, b, dir, ignoreCase) {
         if (Array.isArray(a) && Array.isArray(b)) {
             var result;
             for (var i = 0, len = Math.min(a.length, b.length); i < len && !result; i++) {
-                result = compare(a[i], b[i]);
+                result = compare(a[i], b[i], dir, ignoreCase);
             }
             return result || a.length - b.length;
         }
-        return a === b ? 0 : !evallable(a) || a < b ? -1 : !evallable(b) || a > b ? 1 : 0;
+        if (a === b) {
+            return 0;
+        }
+        var x = !evallable(a) && -1;
+        var y = !evallable(b) && 1;
+        if (x || y) {
+            return (x + y) * dir;
+        }
+        if (isString(a) || isString(b)) {
+            a = string(a);
+            b = string(b);
+            if (ignoreCase) {
+                /* istanbul ignore else */
+                if (collator) {
+                    return collator.compare(a, b) * dir;
+                } else {
+                    a = a.toLowerCase();
+                    b = b.toLowerCase();
+                }
+            }
+            return (a > b ? 1 : a < b ? -1 : 0) * dir;
+        }
+        return (a - b) * dir;
+    }
+
+    function sortby(arr, varargs, compare) {
+        if (!evallable(arr)) {
+            return arr;
+        }
+        var result = Array.isArray(arr) ? new Array(arr.length) : {};
+        var fn = detectKeyFn(varargs, arr);
+        var tmp = [];
+        each(arr, function (i, v) {
+            tmp.push([i, v, fn(v, i)]);
+        });
+        tmp.sort(function (a, b) {
+            return compare(a[2], b[2]);
+        });
+        each(tmp, function (i, v) {
+            result[arr.push ? i : v[0]] = v[1];
+        });
+        return result;
     }
 
     function inherit(base, values) {
@@ -1030,6 +1094,7 @@
         round: Math.round,
         floor: Math.floor,
         ceil: Math.ceil,
+        asdate: asdate,
         as: function (obj, varargs) {
             return (varargs.globals[string(varargs.raw())] = obj);
         },
@@ -1039,19 +1104,19 @@
             }
         },
         more: function (a, b) {
-            return (compare(a, b) > 0);
+            return (compare(a, b, 1) > 0);
         },
         less: function (a, b) {
-            return (compare(a, b) < 0);
+            return (compare(a, b, 1) < 0);
         },
         ormore: function (a, b) {
-            return (compare(a, b) >= 0);
+            return (compare(a, b, 1) >= 0);
         },
         orless: function (a, b) {
-            return (compare(a, b) <= 0);
+            return (compare(a, b, 1) <= 0);
         },
         between: function (a, b, c) {
-            return (compare(a, b) >= 0 && compare(a, c) <= 0);
+            return (compare(a, b, 1) >= 0 && compare(a, c, 1) <= 0);
         },
         equals: function (a, b) {
             return (string(a) === string(b));
@@ -1228,7 +1293,16 @@
             return [].concat(arr).reverse();
         },
         sort: function (arr) {
-            return [].concat(arr).sort(compare);
+            return [].concat(arr).sort(compares[0]);
+        },
+        isort: function (arr) {
+            return [].concat(arr).sort(compares[1]);
+        },
+        rsort: function (arr) {
+            return [].concat(arr).sort(compares[2]);
+        },
+        irsort: function (arr) {
+            return [].concat(arr).sort(compares[3]);
         },
         slice: function (arr, a, b) {
             return [].concat(arr).slice(a, b);
@@ -1272,21 +1346,16 @@
             return result;
         },
         sortby: function (arr, varargs) {
-            if (!evallable(arr)) {
-                return arr;
-            }
-            var result = Array.isArray(arr) ? new Array(arr.length) : {};
-            var fn = detectKeyFn(varargs, arr);
-            var tmp = [];
-            var j = 0;
-            each(arr, function (i, v) {
-                tmp.push([fn(v, i), ++j, i]);
-            });
-            tmp.sort(compare);
-            each(tmp, function (i, v) {
-                result[arr.push ? i : v[2]] = arr[v[2]];
-            });
-            return result;
+            return sortby(arr, varargs, compares[0]);
+        },
+        isortby: function (arr, varargs) {
+            return sortby(arr, varargs, compares[1]);
+        },
+        rsortby: function (arr, varargs) {
+            return sortby(arr, varargs, compares[2]);
+        },
+        irsortby: function (arr, varargs) {
+            return sortby(arr, varargs, compares[3]);
         },
         groupby: function (arr, varargs) {
             var result = {};
@@ -1300,6 +1369,36 @@
             });
             return result;
         },
+        addtime: function (obj, span) {
+            obj = asdate(obj);
+            if (!evallable(obj)) {
+                return obj;
+            }
+            var dir = 1;
+            span = string(span);
+            if (span[0] === '+' || span[0] === '-') {
+                dir = span[0] === '-' ? -1 : 1;
+                span = span.slice(1);
+            }
+            var m, re = /(\d+)([yMwdhms])/g;
+            var args = [
+                obj.getFullYear(),
+                obj.getMonth(),
+                obj.getDate(),
+                obj.getHours(),
+                obj.getMinutes(),
+                obj.getSeconds(),
+                obj.getMilliseconds()
+            ];
+            while ((m = re.exec(span)) !== null) {
+                if (m[2] === 'w') {
+                    args[2] += parseInt(m[1]) * 7 * dir;
+                } else {
+                    args['yMdhms'.indexOf(m[2])] += parseInt(m[1]) * dir;
+                }
+            }
+            return +new Date(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+        },
         in: function (value, varargs) {
             var b = varargs.next(true);
             return Array.isArray(b) ? b.indexOf(value) >= 0 : !!b && typeof b === 'object' && value in b;
@@ -1308,7 +1407,7 @@
             return a !== null && a !== undefined ? a : b;
         },
         '!!': function (obj, varargs) {
-            return !!(varargs.hasArgs() ? varargs.next() : obj);  
+            return !!(varargs.hasArgs() ? varargs.next() : obj);
         },
         '&&': function (value, varargs) {
             return value ? varargs.reset() : varargs.stop();
@@ -1336,7 +1435,7 @@
     ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all none sum map test not sortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
@@ -1408,35 +1507,35 @@
                     } else h[1] ? a = n[h[1]] : a = n[s++];
                     if (/[^s]/.test(h[8]) && r(a) != "number") throw t("[sprintf] expecting number but found %s", r(a));
                     switch (h[8]) {
-                    case "b":
-                        a = a.toString(2);
-                        break;
-                    case "c":
-                        a = String.fromCharCode(a);
-                        break;
-                    case "d":
-                        a = parseInt(a, 10);
-                        break;
-                    case "e":
-                        a = h[7] ? a.toExponential(h[7]) : a.toExponential();
-                        break;
-                    case "f":
-                        a = h[7] ? parseFloat(a).toFixed(h[7]) : parseFloat(a);
-                        break;
-                    case "o":
-                        a = a.toString(8);
-                        break;
-                    case "s":
-                        a = (a = String(a)) && h[7] ? a.substring(0, h[7]) : a;
-                        break;
-                    case "u":
-                        a >>>= 0;
-                        break;
-                    case "x":
-                        a = a.toString(16);
-                        break;
-                    case "X":
-                        a = a.toString(16).toUpperCase()
+                        case "b":
+                            a = a.toString(2);
+                            break;
+                        case "c":
+                            a = String.fromCharCode(a);
+                            break;
+                        case "d":
+                            a = parseInt(a, 10);
+                            break;
+                        case "e":
+                            a = h[7] ? a.toExponential(h[7]) : a.toExponential();
+                            break;
+                        case "f":
+                            a = h[7] ? parseFloat(a).toFixed(h[7]) : parseFloat(a);
+                            break;
+                        case "o":
+                            a = a.toString(8);
+                            break;
+                        case "s":
+                            a = (a = String(a)) && h[7] ? a.substring(0, h[7]) : a;
+                            break;
+                        case "u":
+                            a >>>= 0;
+                            break;
+                        case "x":
+                            a = a.toString(16);
+                            break;
+                        case "X":
+                            a = a.toString(16).toUpperCase()
                     }
                     a = /[def]/.test(h[8]) && h[3] && a >= 0 ? "+" + a : a, d = h[4] ? h[4] == "0" ? "0" : h[4].charAt(1) : " ", v = h[6] - String(a).length, p = h[6] ? i(d, v) : "", f.push(h[5] ? a + p : p + a)
                 }
@@ -1532,38 +1631,38 @@
             function getString(specifier) {
                 var len = specifier.length;
                 switch (specifier.charAt(0)) {
-                case 'd':
-                    return len === 4 ? translations.longWeekday[date.getDay()] : len === 3 ? translations.shortWeekday[date.getDay()] : padZero(date.getDate(), len);
-                case 'f':
-                case 'F':
-                    var str = (date.getMilliseconds() + '000000').substr(0, len);
-                    return specifier.charAt(0) === 'f' || !/^0+$/.test(str) ? str : '';
-                case 'g':
-                    return translations.era[+(date.getFullYear() >= 0)];
-                case 'h':
-                    return padZero((date.getHours() % 12) || 12, len);
-                case 'H':
-                    return padZero(date.getHours(), len);
-                case 'm':
-                    return padZero(date.getMinutes(), len);
-                case 'M':
-                    return len === 4 ? translations.longMonth[date.getMonth()] : len === 3 ? translations.shortMonth[date.getMonth()] : padZero(date.getMonth() + 1, len);
-                case 's':
-                    return padZero(date.getSeconds(), len);
-                case 't':
-                    return translations.designator[+(date.getHours() >= 12)].substr(0, len);
-                case 'y':
-                    return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
-                case 'K':
-                case 'z':
-                    var offset = date.getTimezoneOffset();
-                    return len === 3 || specifier === 'K' ?
-                        (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, 2) + ':' + padZero((Math.abs(offset) % 60), 2) :
-                        (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, len);
-                case ':':
-                    return translations.timeSeparator;
-                case '/':
-                    return translations.dateSeparator;
+                    case 'd':
+                        return len === 4 ? translations.longWeekday[date.getDay()] : len === 3 ? translations.shortWeekday[date.getDay()] : padZero(date.getDate(), len);
+                    case 'f':
+                    case 'F':
+                        var str = (date.getMilliseconds() + '000000').substr(0, len);
+                        return specifier.charAt(0) === 'f' || !/^0+$/.test(str) ? str : '';
+                    case 'g':
+                        return translations.era[+(date.getFullYear() >= 0)];
+                    case 'h':
+                        return padZero((date.getHours() % 12) || 12, len);
+                    case 'H':
+                        return padZero(date.getHours(), len);
+                    case 'm':
+                        return padZero(date.getMinutes(), len);
+                    case 'M':
+                        return len === 4 ? translations.longMonth[date.getMonth()] : len === 3 ? translations.shortMonth[date.getMonth()] : padZero(date.getMonth() + 1, len);
+                    case 's':
+                        return padZero(date.getSeconds(), len);
+                    case 't':
+                        return translations.designator[+(date.getHours() >= 12)].substr(0, len);
+                    case 'y':
+                        return padZero(len >= 3 ? date.getFullYear() : date.getYear(), len);
+                    case 'K':
+                    case 'z':
+                        var offset = date.getTimezoneOffset();
+                        return len === 3 || specifier === 'K' ?
+                            (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, 2) + ':' + padZero((Math.abs(offset) % 60), 2) :
+                            (offset >= 0 ? '-' : '+') + padZero(Math.abs(offset / 60) | 0, len);
+                    case ':':
+                        return translations.timeSeparator;
+                    case '/':
+                        return translations.dateSeparator;
                 }
             }
 

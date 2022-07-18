@@ -1,3 +1,8 @@
+## v2.6.0 / 2022-07-18
+
+- Add case-insensitive and reversed version of `sort` and `sortby`
+- Add date-related pipe function `asdate` and `addtime`
+
 ## v2.5.3 / 2022-06-07
 
 - Fix: evaluate path starting with single $ sign followed by parenthesis as nested object path
