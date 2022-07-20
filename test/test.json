@@ -635,8 +635,8 @@
                 "input": {
                     "a": 1
                 },
-                "template": "{{a between 0 100}}",
-                "expect": "true"
+                "template": "{{a between 0 100}}:{{a between 100 0}}",
+                "expect": "true:true"
             },
             "contains": {
                 "input": {},

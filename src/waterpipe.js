@@ -1116,7 +1116,8 @@
             return (compare(a, b, 1) <= 0);
         },
         between: function (a, b, c) {
-            return (compare(a, b, 1) >= 0 && compare(a, c, 1) <= 0);
+            var d = compare(b, c, 1) >= 0 ? [c, b] : [b, c];
+            return (compare(a, d[0], 1) >= 0 && compare(a, d[1], 1) <= 0);
         },
         equals: function (a, b) {
             return (string(a) === string(b));
