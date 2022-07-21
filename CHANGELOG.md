@@ -1,3 +1,8 @@
+## v2.6.1 / 2022-07-21
+
+- Fix: `between` pipe should sort its two arguments before comparing with input value
+- Fix: cache parsing of time interval in `addtime`
+
 ## v2.6.0 / 2022-07-18
 
 - Add case-insensitive and reversed version of `sort` and `sortby`

@@ -218,6 +218,24 @@
         return ((v || '').length || 0) - (+i || 0) - 1;
     }
 
+    function parseTimeRange(str) {
+        var dir = 1;
+        if (str[0] === '+' || str[0] === '-') {
+            dir = str[0] === '-' ? -1 : 1;
+            str = str.slice(1);
+        }
+        var args = [0, 0, 0, 0, 0, 0, 0];
+        var m, re = /(\d+)([yMwdhms])/g;
+        while ((m = re.exec(str)) !== null) {
+            if (m[2] === 'w') {
+                args[2] += parseInt(m[1]) * 7 * dir;
+            } else {
+                args['yMdhms'.indexOf(m[2])] += parseInt(m[1]) * dir;
+            }
+        }
+        return args;
+    }
+
     function parseRegExp(str) {
         return str.charAt(0) === '/' && /\/((?![*+?])(?:[^\r\n\[/\\]|\\.|\[(?:[^\r\n\]\\]|\\.)*\])+)\/((?:g(?:im?|mi?)?|i(?:gm?|mg?)?|m(?:gi?|ig?)?)?)/g.test(str) && new RegExp(RegExp.$1, RegExp.$2);
     }
@@ -1116,7 +1134,8 @@
             return (compare(a, b, 1) <= 0);
         },
         between: function (a, b, c) {
-            return (compare(a, b, 1) >= 0 && compare(a, c, 1) <= 0);
+            var d = compare(b, c, 1) >= 0 ? [c, b] : [b, c];
+            return (compare(a, d[0], 1) >= 0 && compare(a, d[1], 1) <= 0);
         },
         equals: function (a, b) {
             return (string(a) === string(b));
@@ -1374,30 +1393,16 @@
             if (!evallable(obj)) {
                 return obj;
             }
-            var dir = 1;
-            span = string(span);
-            if (span[0] === '+' || span[0] === '-') {
-                dir = span[0] === '-' ? -1 : 1;
-                span = span.slice(1);
-            }
-            var m, re = /(\d+)([yMwdhms])/g;
-            var args = [
-                obj.getFullYear(),
-                obj.getMonth(),
-                obj.getDate(),
-                obj.getHours(),
-                obj.getMinutes(),
-                obj.getSeconds(),
-                obj.getMilliseconds()
-            ];
-            while ((m = re.exec(span)) !== null) {
-                if (m[2] === 'w') {
-                    args[2] += parseInt(m[1]) * 7 * dir;
-                } else {
-                    args['yMdhms'.indexOf(m[2])] += parseInt(m[1]) * dir;
-                }
-            }
-            return +new Date(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+            var args = cached(parseTimeRange, span);
+            return +new Date(
+                args[0] + obj.getFullYear(),
+                args[1] + obj.getMonth(),
+                args[2] + obj.getDate(),
+                args[3] + obj.getHours(),
+                args[4] + obj.getMinutes(),
+                args[5] + obj.getSeconds(),
+                args[6] + obj.getMilliseconds()
+            );
         },
         in: function (value, varargs) {
             var b = varargs.next(true);

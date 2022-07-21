@@ -1,6 +1,6 @@
 {
   "name": "waterpipe",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "JavaScript template engine",
   "main": "src/waterpipe.js",
   "types": "typings/index.d.ts",
