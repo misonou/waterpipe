@@ -211,6 +211,11 @@
                 "options": { "noEncode": true },
                 "expect": "\"&'<>"
             },
+            "should output whitespace as is when html is false": {
+                "template": "  a\r\n\r\n\n    a  ",
+                "options": { "html": false },
+                "expect": "  a\r\n\r\n\n    a  "
+            },
             "should output JSON with object": {
                 "input": {
                     "prop": 1
@@ -1124,6 +1129,10 @@
         },
         "waterpipe()": {
             "should return empty string for empty template": {
+                "expect": ""
+            },
+            "should return empty string for template containing only whitespaces": {
+                "template": "  \r\n  ",
                 "expect": ""
             },
             "should return exact string if there is no pipe": {

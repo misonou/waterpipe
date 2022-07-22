@@ -69,6 +69,12 @@ interface WaterpipeOptions {
      * Useful for templated text that contains no HTML and could be escaped later on.
      */
     noEncode?: boolean;
+
+    /**
+     * If set to `false`, suppress encoding reserved HTML characters, including ', ", &, < and >,
+     * and keep all whitespaces as-is. Default is `true`.
+     */
+    html?: boolean;
 }
 
 interface WaterpipeGlobal {
