@@ -520,7 +520,7 @@
         var t = new Pipe(str, index || 0);
         var n, r = /([^\s\\"`]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"|`(\S+)/ig;
         while ((n = r.exec(str)) !== null) {
-            t.unshift(new PipeArgument(t[0], (n[3] || (n[2] !== undefined ? n[2] : n[0])).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
+            t.unshift(new PipeArgument(t[0], n[3] || (n[2] !== undefined ? n[2] : n[0]), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
         }
         return t.reverse();
     }

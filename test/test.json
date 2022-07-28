@@ -711,8 +711,8 @@
                 "expect": "bar"
             },
             "replace regex fn": {
-                "template": "{{\"foo\" replace /^\\\\w/ [ $0 upper ]}}",
-                "expect": "Foo"
+                "template": "{{\"foo bar baz\" replace /(\\w)(\\w+)/g [ $1 upper & $2 ]}}",
+                "expect": "Foo Bar Baz"
             },
             "substr": {
                 "template": "{{\"foo\" substr 0 2}}",
