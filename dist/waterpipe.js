@@ -70,6 +70,7 @@
         '0': 0
     };
 
+    var RegExp = /./.constructor;
     var evalCount = 0;
     var execStack = [];
     var collator = typeof Intl !== 'undefined' && Intl.Collator && new Intl.Collator(undefined, { caseFirst: 'upper' });
@@ -519,7 +520,7 @@
         var t = new Pipe(str, index || 0);
         var n, r = /([^\s\\"`]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"|`(\S+)/ig;
         while ((n = r.exec(str)) !== null) {
-            t.unshift(new PipeArgument(t[0], (n[3] || (n[2] !== undefined ? n[2] : n[0])).replace(/\\(.)/g, '$1'), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
+            t.unshift(new PipeArgument(t[0], n[3] || (n[2] !== undefined ? n[2] : n[0]), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
         }
         return t.reverse();
     }
@@ -529,6 +530,7 @@
         var controlStack = [{}];
         var htmlStack = [];
         var lastIndex = 0;
+        var lastIndentWS = '';
         var m, r = /\{\{([\/!]|foreach(?=\s|\})|if(?:\snot)?(?=\s)|else(?:if(?:\snot)?(?=\s))?|&?(?!\}))\s*((?:\}(?!\})|[^}])*\}*)\}\}/g;
 
         function assert(result) {
@@ -567,6 +569,7 @@
                     var last2 = tokens[tokens.length - 2];
                     var newline;
                     var ostr = str;
+                    var nstr = str;
                     if (!stripWS) {
                         newline = str.indexOf('\n') >= 0;
                         ostr = str = str.replace(/\s+/g, htmlStack[0].opened || (htmlStack[0].attrName && htmlStack[0].text) ? ' ' : '');
@@ -575,10 +578,13 @@
                     }
                     htmlStack[0].text += str;
                     if (newline) {
-                        last1.stripWSEnd = false;
+                        if (last1) {
+                            last1.stripWSEnd = false;
+                        }
                         tokens.push({
                             op: OP_SPACE,
-                            value: NEWLINE
+                            value: NEWLINE,
+                            ovalue: nstr
                         });
                     } else if (str && ((htmlStack[1] && htmlStack[0].opened) || str !== ' ')) {
                         var isTagEnd = str[str.length - 1] === '>';
@@ -608,7 +614,8 @@
                     } else {
                         tokens.push({
                             op: OP_SPACE,
-                            value: ' '
+                            value: ' ',
+                            ovalue: nstr
                         });
                     }
                 }
@@ -690,14 +697,28 @@
             }
         }
 
-        str = string(str).replace(/^\s+|\s+$/g, '');
+        str = string(str).replace(/^\r?\n/, '');
         htmlStack.unshift({
             opened: true,
             text: ''
         });
         while ((m = r.exec(str)) !== null) {
             if (lastIndex !== m.index) {
-                parseHTML(str.substring(lastIndex, m.index));
+                var cur = str.substring(lastIndex, m.index);
+                if (/^([^\S\r\n]*(\r?\n[^\S\r\n]*))(\S?)/.test(cur)) {
+                    cur = RegExp.$2.slice(lastIndentWS.length) + cur.slice(RegExp.$1.length);
+                    if (RegExp.$3) {
+                        tokens.push({
+                            op: OP_SPACE,
+                            value: NEWLINE,
+                            ovalue: ''
+                        });
+                    }
+                }
+                lastIndentWS = /(\r?\n[^\S\r\n]*)?$/.test(cur) && RegExp.$1 || '';
+                parseHTML(cur);
+            } else {
+                lastIndentWS = '';
             }
             lastIndex = r.lastIndex;
 
@@ -773,6 +794,7 @@
                     tokens.push(controlStack[0].token);
                     break;
                 default:
+                    lastIndentWS = '';
                     tokens.push({
                         op: OP_EVAL,
                         expression: getPipe(m[2]),
@@ -1042,7 +1064,9 @@
                         i = t.index;
                         break;
                     case OP_SPACE:
-                        if (ws === false) {
+                        if (!options.html) {
+                            output.push(t.ovalue);
+                        } else if (ws === false) {
                             ws = undefined;
                         } else if (t.value === NEWLINE && options.indent) {
                             var k = NEWLINE + indent(options.indent, t.indent, options.indentPadding);
@@ -1077,7 +1101,8 @@
     function getOptions(options, data) {
         options = extend({}, waterpipe.defaultOptions, options || {});
         return {
-            noEncode: options.noEncode,
+            html: options.html !== false,
+            noEncode: options.html === false || options.noEncode,
             indent: evallable(options.indent) ? indent(options.indent, 1) : '',
             indentPadding: evallable(options.indentPadding) ? indent(options.indentPadding, 1) : execStack[0] ? indent(execStack[0].indent, execStack[0].level, execStack[0].indentPadding) : '',
             trimStart: options.trimStart,

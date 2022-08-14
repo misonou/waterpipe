@@ -1,3 +1,8 @@
+## v2.7.0 / 2022-08-14
+
+- Add `html` options
+- Fix: escaped backslash dropped in parsed string value
+
 ## v2.6.1 / 2022-07-21
 
 - Fix: `between` pipe should sort its two arguments before comparing with input value
