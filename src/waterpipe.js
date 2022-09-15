@@ -446,11 +446,11 @@
     }
 
     function sortby(arr, varargs, compare) {
+        var result = Array.isArray(arr) ? new Array(arr.length) : {};
+        var fn = detectKeyFn(varargs, arr);
         if (!evallable(arr)) {
             return arr;
         }
-        var result = Array.isArray(arr) ? new Array(arr.length) : {};
-        var fn = detectKeyFn(varargs, arr);
         var tmp = [];
         each(arr, function (i, v) {
             tmp.push([i, v, fn(v, i)]);
