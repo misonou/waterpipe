@@ -1,3 +1,8 @@
+## v2.7.1 / 2022-09-20
+
+- Fix: `sortby` not taking up argument if input is undefined
+- Fix: call site formatting in pipe error
+
 ## v2.7.0 / 2022-08-14
 
 - Add `html` options
