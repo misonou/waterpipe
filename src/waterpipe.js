@@ -474,7 +474,7 @@
         var arr = str.substr(0, cstart || start).split('\n').reverse();
         var lineStart = str.substring(str.lastIndexOf('\n', start) + 1, start).replace(/^\s+/, '').substr(-20);
         var line = str.substring(start, str.indexOf('\n', end) + 1 || str.length).replace(/\r?\n|\s+$/g, '').substr(0, end - start + 20);
-        return waterpipe('at line {{$0}} column {{$1}}:{{$6}}{{&$2}}{{&$3}}{{$6}}{{$2.length + $4 repeat \\ }}{{$5 repeat ^}}', [arr.length, arr[0].length + 1, lineStart, line, cstart - start || 0, cend - cstart || end - start, '\n\t']);
+        return waterpipe('at line {{$0}} column {{$1}}:\n\t{{$2}}{{$3}}\n\t{{$2.length + $4 repeat " "}}{{$5 repeat ^}}', [arr.length, arr[0].length + 1, lineStart, line, cstart - start || 0, cend - cstart || end - start], { html: false });
     }
 
     function strargs(fn) {
