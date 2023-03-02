@@ -1,3 +1,10 @@
+## v2.7.2 / 2023-03-02
+
+- Fix: incorrect output when attribute value ended with =
+- Fix: newlines between attributes should be collapsed
+- Fix: preserve whitespaces between attributes when `html` option is set to `false`
+- Fix: skip escaping special characters for attribute value
+
 ## v2.7.1 / 2022-09-20
 
 - Fix: `sortby` not taking up argument if input is undefined
