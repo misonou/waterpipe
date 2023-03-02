@@ -564,16 +564,18 @@
                     });
                     return;
                 }
+                var attrName = htmlStack[0].attrName;
+                var opened = htmlStack[0].opened;
                 var nstr = str;
-                if (stripWS || htmlStack[0].attrName || htmlStack[0].opened) {
+                if (stripWS || attrName || opened) {
                     var last1 = tokens[tokens.length - 1];
                     var last2 = tokens[tokens.length - 2];
                     var newline;
                     var ostr = str;
                     if (!stripWS) {
                         newline = str.indexOf('\n') >= 0;
-                        ostr = str = str.replace(/\s+/g, htmlStack[0].opened || (htmlStack[0].attrName && htmlStack[0].text) ? ' ' : '');
-                        str = escape(str, true);
+                        ostr = str = str.replace(/\s+/g, opened || (attrName && htmlStack[0].text) ? ' ' : '');
+                        str = attrName ? str : escape(str, true);
                         newline &= (!str || str === ' ');
                     } else {
                         ostr = str.replace(/^\s+/, '')
@@ -590,7 +592,7 @@
                         });
                         return;
                     }
-                    if (str && ((htmlStack[1] && htmlStack[0].opened) || str !== ' ')) {
+                    if (str && ((htmlStack[1] && opened) || str !== ' ')) {
                         var isTagEnd = str[str.length - 1] === '>';
                         if (tokens.length > start && last1.op === OP_TEXT) {
                             last1.value += str;
