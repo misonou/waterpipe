@@ -545,7 +545,7 @@
 
         function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|\r?\n\s*/ig;
+            var m, r = /<(\/?)([0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|(\s+)/ig;
             var lastIndex = 0;
 
             function isScriptOrStyle() {
@@ -564,17 +564,19 @@
                     });
                     return;
                 }
+                var nstr = str;
                 if (stripWS || htmlStack[0].attrName || htmlStack[0].opened) {
                     var last1 = tokens[tokens.length - 1];
                     var last2 = tokens[tokens.length - 2];
                     var newline;
                     var ostr = str;
-                    var nstr = str;
                     if (!stripWS) {
                         newline = str.indexOf('\n') >= 0;
                         ostr = str = str.replace(/\s+/g, htmlStack[0].opened || (htmlStack[0].attrName && htmlStack[0].text) ? ' ' : '');
                         str = escape(str, true);
                         newline &= (!str || str === ' ');
+                    } else {
+                        ostr = str.replace(/^\s+/, '')
                     }
                     htmlStack[0].text += str;
                     if (newline) {
@@ -586,7 +588,9 @@
                             value: NEWLINE,
                             ovalue: nstr
                         });
-                    } else if (str && ((htmlStack[1] && htmlStack[0].opened) || str !== ' ')) {
+                        return;
+                    }
+                    if (str && ((htmlStack[1] && htmlStack[0].opened) || str !== ' ')) {
                         var isTagEnd = str[str.length - 1] === '>';
                         if (tokens.length > start && last1.op === OP_TEXT) {
                             last1.value += str;
@@ -596,7 +600,7 @@
                         } else if (tokens.length > start + 1 && last2.op === OP_TEXT && last1.value !== NEWLINE) {
                             var ch = (str[0] === '<' || last2.isTagEnd || (!stripWS && !last2.stripWSEnd)) ? last1.value : '';
                             last2.value += ch + str;
-                            last2.ovalue += ch + ostr;
+                            last2.ovalue += last1.ovalue + ostr;
                             last2.isTagEnd = isTagEnd;
                             last2.stripWSEnd = stripWS;
                             tokens.pop();
@@ -611,14 +615,14 @@
                                 indent: htmlStack.length - 2 + !!htmlStack[0].opened
                             });
                         }
-                    } else {
-                        tokens.push({
-                            op: OP_SPACE,
-                            value: ' ',
-                            ovalue: nstr
-                        });
+                        return;
                     }
                 }
+                tokens.push({
+                    op: OP_SPACE,
+                    value: ' ',
+                    ovalue: nstr
+                });
             }
 
             while ((m = r.exec(str)) !== null) {
@@ -673,7 +677,7 @@
                         }
                         break;
                     default:
-                        if (htmlStack[0].tagName) {
+                        if (htmlStack[0].tagName && !m[4]) {
                             if (htmlStack[0].tagName !== '!--' && !htmlStack[0].opened) {
                                 writeText(' ' + m[0], true);
                                 if (m[0].indexOf('=') >= 0) {

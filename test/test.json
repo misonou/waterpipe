@@ -1213,8 +1213,13 @@
                 "expect": "<div>&lt;</div>"
             },
             "should collapse whitespace characters between attributes": {
-                "template": "<div  id=\"id\"  class=\"class\"></div>",
+                "template": "<div  id=\"id\" \n class=\"class\"></div>",
                 "expect": "<div id=\"id\" class=\"class\"></div>"
+            },
+            "should not collapse whitespace characters between attributes when html is false": {
+                "template": "<div  id=\"id\" \n class=\"class\"></div>",
+                "expect": "<div  id=\"id\" \n class=\"class\"></div>",
+                "options": { "html": false }
             },
             "should trim whitespace characters at the beginning and the end": {
                 "template": " <div></div> ",
