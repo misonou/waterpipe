@@ -673,15 +673,24 @@
                         }
                         break;
                     default:
-                        if (htmlStack[0].tagName && htmlStack[0].tagName !== '!--' && !htmlStack[0].opened) {
-                            writeText(' ' + m[0], true);
-                            if (m[0].indexOf('=') >= 0) {
-                                htmlStack.unshift({
-                                    attrName: m[3],
-                                    text: ''
-                                });
+                        if (htmlStack[0].tagName) {
+                            if (htmlStack[0].tagName !== '!--' && !htmlStack[0].opened) {
+                                writeText(' ' + m[0], true);
+                                if (m[0].indexOf('=') >= 0) {
+                                    htmlStack.unshift({
+                                        attrName: m[3],
+                                        text: ''
+                                    });
+                                }
+                                continue;
                             }
-                            continue;
+                        } else if (htmlStack[0].attrName) {
+                            if (m[0][m[0].length - 1] === '"') {
+                                writeText(m[0].slice(0, -1));
+                                shiftHtmlStack();
+                                writeText('"', true);
+                                continue;
+                            }
                         }
                 }
                 writeText(m[0]);

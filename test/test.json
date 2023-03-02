@@ -1175,6 +1175,10 @@
                 "template": "<div><br><img><span></span></div>",
                 "expect": "<div><br><img><span></span></div>"
             },
+            "should handle attribute ending in =": {
+                "template": "<img src=\"t=\"/>",
+                "expect": "<img src=\"t=\"/>"
+            },
             "should encode characters that does not form a valid HTML tag": {
                 "template": "<div><\">\"</div>",
                 "expect": "<div>&lt;&quot;&gt;&quot;</div>"
