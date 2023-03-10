@@ -560,7 +560,8 @@
                 if (isScriptOrStyle()){
                     tokens.push({
                         op: OP_TEXT,
-                        value: str
+                        value: str,
+                        ovalue: str
                     });
                     return;
                 }
