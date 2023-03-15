@@ -556,18 +556,21 @@
                 return htmlStack.length > (controlStack[0].htmlStackCount || 1) && htmlStack.shift();
             }
 
-            function writeText(str, stripWS) {
-                if (isScriptOrStyle()){
+            function writeText(str, stripWS, nstr) {
+                if (isScriptOrStyle()) {
                     tokens.push({
                         op: OP_TEXT,
                         value: str,
-                        ovalue: str
+                        ovalue: str,
+                        nvalue: str
                     });
                     return;
                 }
                 var attrName = htmlStack[0].attrName;
                 var opened = htmlStack[0].opened;
-                var nstr = str;
+                if (nstr === undefined) {
+                    nstr = str;
+                }
                 if (stripWS || attrName || opened) {
                     var last1 = tokens[tokens.length - 1];
                     var last2 = tokens[tokens.length - 2];
@@ -579,7 +582,8 @@
                         str = attrName ? str : escape(str, true);
                         newline &= (!str || str === ' ');
                     } else {
-                        ostr = str.replace(/^\s+/, '')
+                        ostr = str.replace(/^\s+/, '');
+                        nstr = nstr.replace(/^\s+/, '');
                     }
                     htmlStack[0].text += str;
                     if (newline) {
@@ -598,12 +602,14 @@
                         if (tokens.length > start && last1.op === OP_TEXT) {
                             last1.value += str;
                             last1.ovalue += ostr;
+                            last1.nvalue += nstr;
                             last1.isTagEnd = isTagEnd;
                             last1.stripWSEnd = stripWS;
                         } else if (tokens.length > start + 1 && last2.op === OP_TEXT && last1.value !== NEWLINE) {
                             var ch = (str[0] === '<' || last2.isTagEnd || (!stripWS && !last2.stripWSEnd)) ? last1.value : '';
                             last2.value += ch + str;
                             last2.ovalue += last1.ovalue + ostr;
+                            last2.nvalue += last1.ovalue + nstr;
                             last2.isTagEnd = isTagEnd;
                             last2.stripWSEnd = stripWS;
                             tokens.pop();
@@ -615,6 +621,7 @@
                                 isTagEnd: isTagEnd,
                                 value: str,
                                 ovalue: ostr,
+                                nvalue: nstr,
                                 indent: htmlStack.length - 2 + !!htmlStack[0].opened
                             });
                         }
@@ -708,7 +715,7 @@
             while (htmlStack[htmlStackCount]) {
                 var tagName = htmlStack.shift().tagName;
                 if (VOID_TAGS.indexOf(tagName) < 0) {
-                    writeText('</' + tagName + '>', true);
+                    writeText('</' + tagName + '>', true, '');
                 }
             }
         }
@@ -1099,7 +1106,7 @@
                         if (ws && !t.stripWS) {
                             output.push(ws);
                         }
-                        output.push(options.noEncode ? t.ovalue : t.value);
+                        output.push(options.html === false ? t.nvalue : options.noEncode ? t.ovalue : t.value);
                         outstr = true;
                         ws = t.stripWSEnd ? false : undefined;
                 }

@@ -1151,9 +1151,19 @@
                 "template": "<div a=\"\" b\" c=></div>",
                 "expect": "<div a=\"\" b c></div>"
             },
+            "should not drop character when html option is false": {
+                "template": "<div a=\"\" b\" c=></div>",
+                "expect": "<div a=\"\" b\" c=></div>",
+                "options": { "html": false }
+            },
             "should close any unclosed tags at the end of template": {
                 "template": "<div><b>",
                 "expect": "<div><b></b></div>"
+            },
+            "should not match unclosed tags at the end of template when html option is false": {
+                "template": "<div><b>",
+                "expect": "<div><b>",
+                "options": { "html": false }
             },
             "should close any unclosed tags at the end of conditional branch": {
                 "template": "<div>{{if b}}<b>{{elseif i}}<i>{{else}}<u>{{/if}}</div>",
