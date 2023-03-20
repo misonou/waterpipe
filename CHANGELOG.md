@@ -1,3 +1,8 @@
+## v2.7.3 / 2023-03-20
+
+- Fix: script and style content being dropped when `html` option is set to `false`
+- Fix: should output malformed html as is when `html` option is set to `false`
+
 ## v2.7.2 / 2023-03-02
 
 - Fix: incorrect output when attribute value ended with =
