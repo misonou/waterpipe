@@ -508,7 +508,7 @@
             for (var t = this.next, i = 1, count = 1; t; t = t.next, i++) {
                 if (t.value === '[') {
                     count++;
-                } else if (t.value === ']' && --count === 0) {
+                } else if (t.value === ']' && t.canEvaluate === undefined && --count === 0) {
                     return (this.length = constFn(i)).call();
                 }
             }
