@@ -1,3 +1,9 @@
+## v2.7.4 / 2024-01-26
+
+- Fix: parse error with "]" literal
+- Fix: collapse whitespace around script and style tags and their attributes
+- Fix: extra whitespace before tag after pipe
+
 ## v2.7.3 / 2023-03-20
 
 - Fix: script and style content being dropped when `html` option is set to `false`

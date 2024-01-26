@@ -1,5 +1,5 @@
 /*!
- * Waterpipe JavaScript Template v2.6.0
+ * Waterpipe JavaScript Template v2.7.4
  *
  * The MIT License (MIT)
  *
@@ -508,7 +508,7 @@
             for (var t = this.next, i = 1, count = 1; t; t = t.next, i++) {
                 if (t.value === '[') {
                     count++;
-                } else if (t.value === ']' && --count === 0) {
+                } else if (t.value === ']' && t.canEvaluate === undefined && --count === 0) {
                     return (this.length = constFn(i)).call();
                 }
             }
@@ -549,7 +549,7 @@
             var lastIndex = 0;
 
             function isScriptOrStyle() {
-                return htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style' || htmlStack[0].tagName === '!--';
+                return (htmlStack[0].opened && (htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style')) || htmlStack[0].tagName === '!--';
             }
 
             function shiftHtmlStack() {
@@ -578,7 +578,7 @@
                     var ostr = str;
                     if (!stripWS) {
                         newline = str.indexOf('\n') >= 0;
-                        ostr = str = str.replace(/\s+/g, opened || (attrName && htmlStack[0].text) ? ' ' : '');
+                        ostr = str = str.replace(/^\s+/g, (opened && (!last1 || last1.op !== OP_SPACE)) || (attrName && htmlStack[0].text) ? ' ' : '');
                         str = attrName ? str : escape(str, true);
                         newline &= (!str || str === ' ');
                     } else {
