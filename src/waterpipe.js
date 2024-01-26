@@ -578,7 +578,7 @@
                     var ostr = str;
                     if (!stripWS) {
                         newline = str.indexOf('\n') >= 0;
-                        ostr = str = str.replace(/\s+/g, opened || (attrName && htmlStack[0].text) ? ' ' : '');
+                        ostr = str = str.replace(/^\s+/g, (opened && (!last1 || last1.op !== OP_SPACE)) || (attrName && htmlStack[0].text) ? ' ' : '');
                         str = attrName ? str : escape(str, true);
                         newline &= (!str || str === ' ');
                     } else {

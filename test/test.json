@@ -1259,6 +1259,17 @@
                 "template": "<div class=\"  class-a  class-b  \">  This  is  sample  text  </div>",
                 "expect": "<div class=\"class-a class-b\"> This is sample text </div>"
             },
+            "should collapse multiple whitespace characters around new lines": {
+                "input": [1],
+                "template": "<div>\r\n    {{foreach}}\r\n        <b></b>\r\n    {{/foreach}}</div>",
+                "expect": "<div><b></b></div>"
+            },
+            "should collapse multiple whitespace characters around new lines with indentation": {
+                "input": [1],
+                "template": "<div>\r\n    {{foreach}}\r\n        <b></b>\r\n    {{/foreach}}</div>",
+                "expect": "<div>\r\n    <b></b>\r\n</div>",
+                "options": { "indent": 4 }
+            },
             "should not collapse whitespace characters returned from pipe evaluation": {
                 "input": "  sample  ",
                 "template": "<div>This is {{.}} text</div>",
