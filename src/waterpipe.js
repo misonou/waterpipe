@@ -549,7 +549,7 @@
             var lastIndex = 0;
 
             function isScriptOrStyle() {
-                return htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style' || htmlStack[0].tagName === '!--';
+                return (htmlStack[0].opened && (htmlStack[0].tagName === 'script' || htmlStack[0].tagName === 'style')) || htmlStack[0].tagName === '!--';
             }
 
             function shiftHtmlStack() {

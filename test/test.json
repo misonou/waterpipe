@@ -1234,6 +1234,14 @@
                 "template": "<div  id=\"id\" \n class=\"class\"></div>",
                 "expect": "<div id=\"id\" class=\"class\"></div>"
             },
+            "should collapse whitespace characters between attributes for <script>": {
+                "template": "<script  src=\"test.js\"></script>",
+                "expect": "<script src=\"test.js\"></script>"
+            },
+            "should collapse whitespace characters between attributes for <style>": {
+                "template": "<style  media=\"all\"></style>",
+                "expect": "<style media=\"all\"></style>"
+            },
             "should not collapse whitespace characters between attributes when html is false": {
                 "template": "<div  id=\"id\" \n class=\"class\"></div>",
                 "expect": "<div  id=\"id\" \n class=\"class\"></div>",
