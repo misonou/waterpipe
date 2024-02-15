@@ -2,23 +2,30 @@
   "name": "waterpipe",
   "version": "2.8.1",
   "description": "JavaScript template engine",
-  "main": "src/waterpipe.js",
+  "main": "dist/waterpipe.js",
+  "module": "src/waterpipe.js",
   "unpkg": "dist/waterpipe.min.js",
   "types": "typings/index.d.ts",
   "devDependencies": {
     "mocha": "^10.0.0",
     "nyc": "^15.0.1",
-    "uglify-js": "^3.15.1"
+    "webpack": "^5.90.1",
+    "webpack-cli": "^5.1.4"
   },
   "scripts": {
-    "test": "nyc --reporter=lcov --reporter=text-summary node_modules/mocha/bin/_mocha test/*.js",
-    "build": "node -e \"require('fs').copyFileSync('src/waterpipe.js', 'dist/waterpipe.js')\" && uglifyjs -c -m --comments /waterpipe/ --source-map -o dist/waterpipe.min.js -- src/waterpipe.js",
+    "test": "nyc --reporter=lcov --reporter=text-summary node_modules/mocha/bin/_mocha test/*.mjs",
+    "build": "webpack",
     "version": "npm run build && git add -A dist"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/misonou/waterpipe.git"
   },
+  "browserslist": [
+    "> 1%",
+    "not dead",
+    "ie >= 11"
+  ],
   "keywords": [
     "template",
     "data"

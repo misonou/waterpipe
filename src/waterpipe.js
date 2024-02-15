@@ -1,15 +1,4 @@
-/*! waterpipe v2.8.0 | (c) misonou | https://github.com/misonou/waterpipe */
-
-(function (root, factory) {
-    /* istanbul ignore next */
-    if (typeof define === 'function' && define.amd) {
-        define('waterpipe', [], factory);
-    } else if (typeof module === 'object' && module.exports) {
-        module.exports = factory();
-    } else {
-        root.waterpipe = factory();
-    }
-}(this, function () {
+const waterpipe = (function () {
     'use strict';
 
     var OP_EVAL = 1;
@@ -1732,4 +1721,6 @@
         };
     }
     return waterpipe;
-}));
+})();
+
+export default waterpipe;

@@ -1,9 +1,9 @@
 /*jshint esversion:6,node:true,-W030,-W083 */
 /*globals describe,it */
 
-var assert = require('assert');
-var waterpipe = require('../src/waterpipe.js').with('format');
-var spec = JSON.parse(require('fs').readFileSync('test/test.json', 'utf8'));
+import assert from "assert";
+import waterpipe from "../src/waterpipe.js";
+import spec from "./test.json" with { type: "json" };
 
 var consoleWarnCount = 0;
 console.warn = (function (f) {
