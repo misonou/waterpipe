@@ -2,7 +2,7 @@
 /*globals describe,it */
 
 var assert = require('assert');
-var waterpipe = require('../src/waterpipe.js').with('format');
+var waterpipe = require('../dist/waterpipe.js');
 var spec = JSON.parse(require('fs').readFileSync('test/test.json', 'utf8'));
 
 var consoleWarnCount = 0;

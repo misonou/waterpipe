@@ -1,15 +1,43 @@
-/*! waterpipe v2.8.0 | (c) misonou | https://github.com/misonou/waterpipe */
-
-(function (root, factory) {
-    /* istanbul ignore next */
-    if (typeof define === 'function' && define.amd) {
-        define('waterpipe', [], factory);
-    } else if (typeof module === 'object' && module.exports) {
-        module.exports = factory();
-    } else {
-        root.waterpipe = factory();
-    }
-}(this, function () {
+/*! waterpipe v2.7.4 | (c) misonou | https://github.com/misonou/waterpipe#readme */
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory();
+	else if(typeof define === 'function' && define.amd)
+		define("waterpipe", [], factory);
+	else if(typeof exports === 'object')
+		exports["waterpipe"] = factory();
+	else
+		root["waterpipe"] = factory();
+})(this, () => {
+return /******/ (() => { // webpackBootstrap
+/******/ 	"use strict";
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+const waterpipe = (function () {
     'use strict';
 
     var OP_EVAL = 1;
@@ -1724,10 +1752,19 @@
         });
     }
     /* istanbul ignore next */
-    if (typeof module === 'object') {
+    if (true) {
         waterpipe.with = function () {
             return waterpipe;
         };
     }
     return waterpipe;
-}));
+})();
+
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (waterpipe);
+
+__webpack_exports__ = __webpack_exports__["default"];
+/******/ 	return __webpack_exports__;
+/******/ })()
+;
+});
+//# sourceMappingURL=waterpipe.js.map
