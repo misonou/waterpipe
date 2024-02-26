@@ -478,6 +478,38 @@
                 "expect": "true"
             }
         },
+        "Inline template evaluation": {
+            "should return template result with piped value as root object": {
+                "input": { "template": "value={{@root}}" },
+                "template": "{{arrOfFib |> template}}",
+                "expect": "value=[1,1,2,3,5,8]"
+            },
+            "should not double encode HTML entites": {
+                "input": { "template": "value={{@root}}" },
+                "template": "{{specialChars |> template}}",
+                "expect": "value=&lt;&gt;"
+            },
+            "should return pipe result if there is exectly one pipe evaluation and does not have non-WS non-evaluated output": {
+                "input": { "template": "{{arrOfFib}}" },
+                "template": "{{|> template length}}",
+                "expect": "6"
+            },
+            "should have new object stack": {
+                "input": { "template": "{{@1}}" },
+                "template": "{{\"foobar\" |> template}}",
+                "expect": ""
+            },
+            "should read outer global variables": {
+                "input": { "template": "{{myTemplateTestGlobal}}" },
+                "template": "{{let customGlobal true}}{{|> template}}",
+                "expect": "true"
+            },
+            "should not overwrite outer global variables": {
+                "input": { "template": "{{myTemplateTestGlobalOverwrite}}" },
+                "template": "{{let customGlobal true}}{{|> template}}{{customGlobal}}",
+                "expect": "true"
+            }
+        },
         "Control functions": {
             "| should concatenate arrays": {
                 "input": {

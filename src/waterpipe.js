@@ -1026,10 +1026,7 @@
                             }
                         }
                     } else if (isString(func)) {
-                        value = run(func, value, extend({}, options, {
-                            indentPadding: undefined,
-                            trimStart: true
-                        }));
+                        value = apply(value, func);
                     } else if (startpos === resetPos) {
                         value = pipe[i - 1].canEvaluate === false ? pipe[i - 1].value : undefined;
                     } else {
@@ -1121,6 +1118,13 @@
         return outstr === true ? output.join('') : result;
     }
 
+    function apply(data, str) {
+        return run(str, data, extend({}, execStack[0], {
+            indentPadding: undefined,
+            trimStart: true
+        }));
+    }
+
     function getOptions(options, data) {
         options = extend({}, waterpipe.defaultOptions, options || {});
         return {
@@ -1161,6 +1165,7 @@
         floor: Math.floor,
         ceil: Math.ceil,
         asdate: asdate,
+        eval: apply,
         as: function (obj, varargs) {
             return (varargs.globals[string(varargs.raw())] = obj);
         },
@@ -1485,7 +1490,7 @@
             return internals.sprintf(format, obj);
         }
     });
-    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
+    ('|>eval ?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
     each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
