@@ -545,7 +545,7 @@
 
         function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|(\s+)/ig;
+            var m, r = /<(\/?)((?:[0-9a-z]+:)?[0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|(\s+)/ig;
             var lastIndex = 0;
 
             function isScriptOrStyle() {

@@ -10,17 +10,17 @@
             "value": 1,
             "even": false
             }, {
-            "value": 1,
-            "even": false
+                "value": 1,
+                "even": false
             }, {
-            "value": 2,
-            "even": true
+                "value": 2,
+                "even": true
             }, {
-            "value": 3,
-            "even": false
+                "value": 3,
+                "even": false
             }, {
-            "value": 5,
-            "even": false
+                "value": 5,
+                "even": false
             }, {
             "value": 8,
             "even": true
@@ -1220,6 +1220,10 @@
             "should handle void tags": {
                 "template": "<div><br><img><span></span></div>",
                 "expect": "<div><br><img><span></span></div>"
+            },
+            "should handle tags and attributes with namespace": {
+                "template": "<o:div o:attr=\"\"></o:div>",
+                "expect": "<o:div o:attr=\"\"></o:div>"
             },
             "should handle attribute ending in =": {
                 "template": "<img src=\"t=\"/>",
