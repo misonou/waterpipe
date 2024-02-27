@@ -1,28 +1,4 @@
-/*!
- * Waterpipe JavaScript Template v2.7.4
- *
- * The MIT License (MIT)
- *
- * Copyright (c) 2017 misonou
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+/*! waterpipe v2.8.0 | (c) misonou | https://github.com/misonou/waterpipe */
 
 (function (root, factory) {
     /* istanbul ignore next */
@@ -545,7 +521,7 @@
 
         function parseHTML(str, htmlStackCount) {
             var start = tokens.length;
-            var m, r = /<(\/?)([0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|(\s+)/ig;
+            var m, r = /<(\/?)((?:[0-9a-z]+:)?[0-9a-z]+|!doctype|!--)|\/?>|-->|([^\s=\/<>"0-9.-][^\s=\/<>"]*)(?:="|$|(?=[\s=\/<>"]))|"|(\s+)/ig;
             var lastIndex = 0;
 
             function isScriptOrStyle() {
@@ -1026,10 +1002,7 @@
                             }
                         }
                     } else if (isString(func)) {
-                        value = run(func, value, extend({}, options, {
-                            indentPadding: undefined,
-                            trimStart: true
-                        }));
+                        value = apply(value, func);
                     } else if (startpos === resetPos) {
                         value = pipe[i - 1].canEvaluate === false ? pipe[i - 1].value : undefined;
                     } else {
@@ -1121,6 +1094,13 @@
         return outstr === true ? output.join('') : result;
     }
 
+    function apply(data, str) {
+        return run(str, data, extend({}, execStack[0], {
+            indentPadding: undefined,
+            trimStart: true
+        }));
+    }
+
     function getOptions(options, data) {
         options = extend({}, waterpipe.defaultOptions, options || {});
         return {
@@ -1161,6 +1141,7 @@
         floor: Math.floor,
         ceil: Math.ceil,
         asdate: asdate,
+        eval: apply,
         as: function (obj, varargs) {
             return (varargs.globals[string(varargs.raw())] = obj);
         },
@@ -1485,7 +1466,7 @@
             return internals.sprintf(format, obj);
         }
     });
-    ('?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
+    ('|>eval ?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
     each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || |'.split(' '), function (i, v) {

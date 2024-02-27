@@ -1,3 +1,8 @@
+## v2.8.0 / 2024-02-27
+
+- Add `eval` pipe
+- Fix: handle tag with namespace
+
 ## v2.7.4 / 2024-01-26
 
 - Fix: parse error with "]" literal

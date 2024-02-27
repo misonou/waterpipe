@@ -42,4 +42,9 @@ This option is only effective if the indent option is present and not equal to `
 #### `noEncode`
 
 Suppress encoding reserved HTML characters, including `'`, `"`, `&`, `<` and `>`.
-Useful for templated text that contains no HTML and could be escaped later on.
+
+#### `html`
+
+When set to `false`, all HTML features such as encoding reserved HTML characters, indentation, malformed tag and attribute completions will be turned off.
+Useful for templates that is not for generating HTML content.
+Default is `true`.

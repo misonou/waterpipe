@@ -1,8 +1,9 @@
 {
   "name": "waterpipe",
-  "version": "2.7.4",
+  "version": "2.8.0",
   "description": "JavaScript template engine",
   "main": "src/waterpipe.js",
+  "unpkg": "dist/waterpipe.min.js",
   "types": "typings/index.d.ts",
   "devDependencies": {
     "mocha": "^10.0.0",
@@ -11,7 +12,7 @@
   },
   "scripts": {
     "test": "nyc --reporter=lcov --reporter=text-summary node_modules/mocha/bin/_mocha test/*.js",
-    "build": "node -e \"require('fs').copyFileSync('src/waterpipe.js', 'dist/waterpipe.js')\" && uglifyjs -c -m --source-map -o dist/waterpipe.min.js -- src/waterpipe.js",
+    "build": "node -e \"require('fs').copyFileSync('src/waterpipe.js', 'dist/waterpipe.js')\" && uglifyjs -c -m --comments /waterpipe/ --source-map -o dist/waterpipe.min.js -- src/waterpipe.js",
     "version": "npm run build && git add -A dist"
   },
   "repository": {
