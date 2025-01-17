@@ -1453,7 +1453,9 @@
             varargs.push(value);
             return varargs.reset();
         },
-        ':json': JSON.stringify,
+        ':json': function (value) {
+            return JSON.stringify(value);
+        },
         ':query': function (obj) {
             var arr = internals.buildParams([], obj);
             return arr.join("&").replace(/%20/g, "+");

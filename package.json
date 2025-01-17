@@ -1,6 +1,6 @@
 {
   "name": "waterpipe",
-  "version": "2.8.0",
+  "version": "2.8.1",
   "description": "JavaScript template engine",
   "main": "src/waterpipe.js",
   "unpkg": "dist/waterpipe.min.js",
