@@ -1,15 +1,18 @@
-/*! waterpipe v2.8.0 | (c) misonou | https://github.com/misonou/waterpipe */
-
-(function (root, factory) {
-    /* istanbul ignore next */
-    if (typeof define === 'function' && define.amd) {
-        define('waterpipe', [], factory);
-    } else if (typeof module === 'object' && module.exports) {
-        module.exports = factory();
-    } else {
-        root.waterpipe = factory();
-    }
-}(this, function () {
+/*! waterpipe v2.8.2 | (c) misonou | https://github.com/misonou/waterpipe#readme */
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory();
+	else if(typeof define === 'function' && define.amd)
+		define("waterpipe", [], factory);
+	else if(typeof exports === 'object')
+		exports["waterpipe"] = factory();
+	else
+		root["waterpipe"] = factory();
+})(this, function() {
+return /******/ (function() { // webpackBootstrap
+/******/ 	"use strict";
+var __webpack_exports__ = {};
+const waterpipe = (function () {
     'use strict';
 
     var OP_EVAL = 1;
@@ -1488,19 +1491,19 @@
 
     /*! jquery.js | Copyright jQuery Foundation and other contributors | Released under the MIT license */
     /* istanbul ignore next */
-    (function (exports) {
-        exports.buildParams = function (arr, obj, prefix) {
+    (function (e) {
+        e.buildParams = function buildParams(arr, obj, prefix) {
             if (prefix && Array.isArray(obj)) {
                 for (var i = 0, len = obj.length; i < len; i++) {
                     if (/\[\]$/.test(prefix)) {
                         arr[arr.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj[i]);
                     } else {
-                        exports.buildParams(arr, obj[i], prefix + "[" + (typeof obj[i] === "object" && obj[i] ? i : "") + "]");
+                        buildParams(arr, obj[i], prefix + "[" + (typeof obj[i] === "object" && obj[i] ? i : "") + "]");
                     }
                 }
             } else if (typeof obj === "object") {
                 for (var name in obj) {
-                    exports.buildParams(arr, obj[name], prefix ? prefix + "[" + name + "]" : name);
+                    buildParams(arr, obj[name], prefix ? prefix + "[" + name + "]" : name);
                 }
             } else {
                 arr[arr.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj);
@@ -1616,7 +1619,7 @@
     })(internals);
 
     /*! formatdate.js | Copyright misonou | Released under the MIT license */
-    (function (exports) {
+    (function (e) {
         'use strict';
 
         var standardFormat = {
@@ -1710,7 +1713,7 @@
             return arr.join('');
         }
 
-        exports.formatDate = formatDate;
+        e.formatDate = formatDate;
     })(internals);
 
     /* istanbul ignore next */
@@ -1726,10 +1729,19 @@
         });
     }
     /* istanbul ignore next */
-    if (typeof module === 'object') {
+    if (true) {
         waterpipe.with = function () {
             return waterpipe;
         };
     }
     return waterpipe;
-}));
+})();
+
+/* harmony default export */ __webpack_exports__["default"] = (waterpipe);
+
+__webpack_exports__ = __webpack_exports__["default"];
+/******/ 	return __webpack_exports__;
+/******/ })()
+;
+});
+//# sourceMappingURL=waterpipe.js.map

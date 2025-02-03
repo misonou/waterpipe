@@ -1,3 +1,11 @@
+## v2.8.2 / 2025-02-03
+
+- Update source code to ES module
+
+## v2.8.1 / 2025-01-17
+
+- Fix: `:json` pipe should consume no arguments
+
 ## v2.8.0 / 2024-02-27
 
 - Add `eval` pipe
