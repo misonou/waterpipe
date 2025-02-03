@@ -1477,19 +1477,19 @@ const waterpipe = (function () {
 
     /*! jquery.js | Copyright jQuery Foundation and other contributors | Released under the MIT license */
     /* istanbul ignore next */
-    (function (exports) {
-        exports.buildParams = function (arr, obj, prefix) {
+    (function (e) {
+        e.buildParams = function buildParams(arr, obj, prefix) {
             if (prefix && Array.isArray(obj)) {
                 for (var i = 0, len = obj.length; i < len; i++) {
                     if (/\[\]$/.test(prefix)) {
                         arr[arr.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj[i]);
                     } else {
-                        exports.buildParams(arr, obj[i], prefix + "[" + (typeof obj[i] === "object" && obj[i] ? i : "") + "]");
+                        buildParams(arr, obj[i], prefix + "[" + (typeof obj[i] === "object" && obj[i] ? i : "") + "]");
                     }
                 }
             } else if (typeof obj === "object") {
                 for (var name in obj) {
-                    exports.buildParams(arr, obj[name], prefix ? prefix + "[" + name + "]" : name);
+                    buildParams(arr, obj[name], prefix ? prefix + "[" + name + "]" : name);
                 }
             } else {
                 arr[arr.length] = encodeURIComponent(prefix) + '=' + encodeURIComponent(obj);
@@ -1605,7 +1605,7 @@ const waterpipe = (function () {
     })(internals);
 
     /*! formatdate.js | Copyright misonou | Released under the MIT license */
-    (function (exports) {
+    (function (e) {
         'use strict';
 
         var standardFormat = {
@@ -1699,7 +1699,7 @@ const waterpipe = (function () {
             return arr.join('');
         }
 
-        exports.formatDate = formatDate;
+        e.formatDate = formatDate;
     })(internals);
 
     /* istanbul ignore next */
