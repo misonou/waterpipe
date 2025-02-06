@@ -303,7 +303,7 @@ const waterpipe = (function () {
 
     function each(obj, callback) {
         var i, len;
-        if (obj && 'length' in obj) {
+        if (obj && typeof obj.length === 'number' && obj.length >= 0) {
             for (i = 0, len = obj.length; i < len; i++) {
                 if (callback(i, obj[i]) === false) {
                     return;
