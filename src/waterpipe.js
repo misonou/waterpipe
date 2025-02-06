@@ -483,9 +483,9 @@ const waterpipe = (function () {
 
     function parsePipe(str, index) {
         var t = new Pipe(str, index || 0);
-        var n, r = /([^\s\\"`]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"|`(\S+)/ig;
+        var n, r = /"("|(?:[^"\\]|\\.|"\S)*)"(?=\s|$)|`(\S+)|([^\s\\]|\\.)(?:[^\s\\]|\\.)*/ig;
         while ((n = r.exec(str)) !== null) {
-            t.unshift(new PipeArgument(t[0], n[3] || (n[2] !== undefined ? n[2] : n[0]), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
+            t.unshift(new PipeArgument(t[0], n[2] || (n[1] !== undefined ? n[1] : n[0]), t.index + n.index, t.index + r.lastIndex, n[2] || n[1] !== undefined ? false : n[3] === '$' ? true : undefined));
         }
         return t.reverse();
     }

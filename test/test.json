@@ -326,6 +326,14 @@
                 "template": "{{[ == \"]\" ]}}",
                 "expect": "false"
             },
+            "should be parsed correctly with literal starting with double quote": {
+                "template": "{{\"\" & \"a}}",
+                "expect": "&quot;a"
+            },
+            "should be parsed correctly with literal starting with more consecutive quotes": {
+                "template": "{{\"\"\"}}:{{\"\"a\"}}:{{\"\"\"\"}}:{{\"a\"\"a\"}}",
+                "expect": "&quot;:&quot;a:&quot;&quot;:a&quot;&quot;a"
+            },
             "should be parsed in constant mode if evaluated to object but input is primitive": {
                 "input": {
                     "primitive": "object",
