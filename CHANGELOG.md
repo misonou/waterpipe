@@ -1,3 +1,8 @@
+## v2.8.3 / 2025-02-08
+
+- Fix: handling of handling and consecutive double quotes
+- Fix: avoid evaluation error when iterating non-object
+
 ## v2.8.2 / 2025-02-03
 
 - Update source code to ES module

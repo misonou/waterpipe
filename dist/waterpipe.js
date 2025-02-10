@@ -1,4 +1,4 @@
-/*! waterpipe v2.8.2 | (c) misonou | https://github.com/misonou/waterpipe#readme */
+/*! waterpipe v2.8.3 | (c) misonou | https://github.com/misonou/waterpipe#readme */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -317,7 +317,7 @@ const waterpipe = (function () {
 
     function each(obj, callback) {
         var i, len;
-        if (obj && 'length' in obj) {
+        if (obj && typeof obj.length === 'number' && obj.length >= 0) {
             for (i = 0, len = obj.length; i < len; i++) {
                 if (callback(i, obj[i]) === false) {
                     return;
@@ -497,9 +497,9 @@ const waterpipe = (function () {
 
     function parsePipe(str, index) {
         var t = new Pipe(str, index || 0);
-        var n, r = /([^\s\\"`]|\\.)(?:[^\s\\]|\\.)*|"((?:[^"\\]|\\.)*)"|`(\S+)/ig;
+        var n, r = /"("|(?:[^"\\]|\\.|"\S)*)"(?=\s|$)|`(\S+)|([^\s\\]|\\.)(?:[^\s\\]|\\.)*/ig;
         while ((n = r.exec(str)) !== null) {
-            t.unshift(new PipeArgument(t[0], n[3] || (n[2] !== undefined ? n[2] : n[0]), t.index + n.index, t.index + r.lastIndex, n[3] || n[2] !== undefined ? false : n[1] === '$' ? true : undefined));
+            t.unshift(new PipeArgument(t[0], n[2] || (n[1] !== undefined ? n[1] : n[0]), t.index + n.index, t.index + r.lastIndex, n[2] || n[1] !== undefined ? false : n[3] === '$' ? true : undefined));
         }
         return t.reverse();
     }
