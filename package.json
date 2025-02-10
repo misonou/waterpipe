@@ -7,13 +7,13 @@
   "unpkg": "dist/waterpipe.min.js",
   "types": "typings/index.d.ts",
   "devDependencies": {
+    "c8": "^10.1.3",
     "mocha": "^10.0.0",
-    "nyc": "^15.0.1",
     "webpack": "^5.90.1",
     "webpack-cli": "^5.1.4"
   },
   "scripts": {
-    "test": "nyc --reporter=lcov --reporter=text-summary node_modules/mocha/bin/_mocha test/*.mjs",
+    "test": "c8 --reporter=lcov --reporter=text-summary node_modules/mocha/bin/_mocha test/*.mjs",
     "build": "webpack",
     "version": "npm run build && git add -A dist"
   },
