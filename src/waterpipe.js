@@ -1132,11 +1132,13 @@ const waterpipe = (function () {
         asdate: asdate,
         eval: apply,
         as: function (obj, varargs) {
-            return (varargs.globals[string(varargs.raw())] = obj);
+            var name = varargs.raw();
+            return (varargs.globals[string(isFunction(name) ? name() : name)] = obj);
         },
         let: function (obj, varargs) {
             while (varargs.hasArgs()) {
-                varargs.globals[string(varargs.raw())] = varargs.next();
+                var name = varargs.raw();
+                varargs.globals[string(isFunction(name) ? name() : name)] = varargs.next();
             }
         },
         more: function (a, b) {
