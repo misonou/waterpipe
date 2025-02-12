@@ -1444,6 +1444,21 @@ const waterpipe = (function () {
             varargs.push(value);
             return varargs.reset();
         },
+        '{': function (obj, varargs) {
+            var globals = varargs.globals;
+            var prev = globals.new;
+            var o = {};
+            globals.new = o;
+            while (varargs.hasArgs()) {
+                var key = varargs.raw();
+                if (key === '}') {
+                    break;
+                }
+                o[string(isFunction(key) ? key() : key).replace(/:$/, '')] = varargs.next();
+            }
+            globals.new = prev;
+            return o;
+        },
         ':json': function (value) {
             return JSON.stringify(value);
         },
@@ -1462,7 +1477,7 @@ const waterpipe = (function () {
     ('|>eval ?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || | {'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
