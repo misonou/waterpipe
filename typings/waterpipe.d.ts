@@ -75,6 +75,11 @@ interface WaterpipeOptions {
      * and keep all whitespaces as-is. Default is `true`.
      */
     html?: boolean;
+
+    /**
+     * Whether to suppress warning output to console.
+     */
+    noWarning?: boolean;
 }
 
 interface WaterpipeGlobal {

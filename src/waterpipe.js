@@ -807,6 +807,7 @@ const waterpipe = (function () {
         var output = [];
         var objStack = options.objStack || [];
         var iteratorStack = options.iteratorStack || [];
+        var warnedPos = {};
         var result;
 
         function Iterable(obj) {
@@ -998,7 +999,12 @@ const waterpipe = (function () {
                         throw new Error('Invalid pipe function');
                     }
                 } catch (e) {
-                    return console.warn(e.toString() + ' ' + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
+                    var cstart = pipe[startpos].start;
+                    if (warnedPos[cstart] || options.noWarning) {
+                        return;
+                    }
+                    warnedPos[cstart] = true;
+                    return console.warn(e.toString() + ' ' + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, cstart, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
                 }
             }
             return returnArray.length ? flatten(returnArray.concat(value)) : value;
@@ -1095,6 +1101,7 @@ const waterpipe = (function () {
         return {
             html: options.html !== false,
             noEncode: options.html === false || options.noEncode,
+            noWarning: options.noWarning,
             indent: evallable(options.indent) ? indent(options.indent, 1) : '',
             indentPadding: evallable(options.indentPadding) ? indent(options.indentPadding, 1) : execStack[0] ? indent(execStack[0].indent, execStack[0].level, execStack[0].indentPadding) : '',
             trimStart: options.trimStart,
