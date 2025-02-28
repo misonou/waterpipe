@@ -103,6 +103,14 @@
                     "prop": "foobar",
                     "key": "prop"
                 },
+                "template": "{{$$key}}",
+                "expect": "foobar"
+            },
+            "should evaluate property name in first segment in parenthesis": {
+                "input": {
+                    "prop": "foobar",
+                    "key": "prop"
+                },
                 "template": "{{$$(key)}}",
                 "expect": "foobar"
             },
