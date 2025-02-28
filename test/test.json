@@ -318,6 +318,10 @@
                 "template": "{{[ [ 1 ] ]}}",
                 "expect": "1"
             },
+            "should support unclosed function argument": {
+                "template": "{{[ [ 1}}:{{[ [ 1 ] odd}}",
+                "expect": "1:true"
+            },
             "should be constant for shorthand special variables": {
                 "template": "{{\".\" == .}}",
                 "expect": "true"

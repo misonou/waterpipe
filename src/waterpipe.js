@@ -474,9 +474,10 @@ const waterpipe = (function () {
                 if (t.value === '[') {
                     count++;
                 } else if (t.value === ']' && t.canEvaluate === undefined && --count === 0) {
-                    return (this.length = constFn(i)).call();
+                    break;
                 }
             }
+            return (this.length = constFn(i)).call();
         }
         this.length = function () {};
     };
