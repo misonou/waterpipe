@@ -39,6 +39,10 @@ If either `0` or an empty string is specified, indentation is turned off as if t
 Number of spaces or the specific sequence of characters that will be left padded to each line.
 This option is only effective if the indent option is present and not equal to `0` or an empty string.
 
+#### `noWarning`
+
+Turn off console warning.
+
 #### `noEncode`
 
 Suppress encoding reserved HTML characters, including `'`, `"`, `&`, `<` and `>`.

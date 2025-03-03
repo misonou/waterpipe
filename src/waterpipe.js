@@ -1,7 +1,7 @@
 const waterpipe = (function () {
     'use strict';
 
-    var VERSION = '2.8.3';
+    var VERSION = '2.9.0';
 
     var OP_EVAL = 1;
     var OP_TEST = 2;

@@ -1,3 +1,12 @@
+## v2.9.0 / 2025-03-03
+
+- Add `noWarning` option to turn console warning off
+- Gracefully handle unclosed function argument
+- Export library version
+- Fix: ignore repeated warning
+- Fix: avoid function to be coerced as key in `as` and `let`
+- Fix: evaluate property name in first segment with double $ sign
+
 ## v2.8.3 / 2025-02-08
 
 - Fix: handling of handling and consecutive double quotes

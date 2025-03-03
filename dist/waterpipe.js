@@ -1,4 +1,4 @@
-/*! waterpipe v2.8.3 | (c) misonou | https://github.com/misonou/waterpipe#readme */
+/*! waterpipe v2.9.0 | (c) misonou | https://github.com/misonou/waterpipe#readme */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -14,6 +14,8 @@ return /******/ (function() { // webpackBootstrap
 var __webpack_exports__ = {};
 const waterpipe = (function () {
     'use strict';
+
+    var VERSION = '2.9.0';
 
     var OP_EVAL = 1;
     var OP_TEST = 2;
@@ -480,7 +482,7 @@ const waterpipe = (function () {
         }
     }
     PipeArgument.prototype.objectPath = function () {
-        return (this.objectPath = constFn(cached(parseObjectPath, this.textValue.replace(/^\$(?!\()/, '')))).call();
+        return (this.objectPath = constFn(cached(parseObjectPath, this.textValue))).call();
     };
     PipeArgument.prototype.length = function () {
         if (this.value === '[' && this.canEvaluate === undefined) {
@@ -488,9 +490,10 @@ const waterpipe = (function () {
                 if (t.value === '[') {
                     count++;
                 } else if (t.value === ']' && t.canEvaluate === undefined && --count === 0) {
-                    return (this.length = constFn(i)).call();
+                    break;
                 }
             }
+            return (this.length = constFn(i)).call();
         }
         this.length = function () {};
     };
@@ -821,6 +824,7 @@ const waterpipe = (function () {
         var output = [];
         var objStack = options.objStack || [];
         var iteratorStack = options.iteratorStack || [];
+        var warnedPos = {};
         var result;
 
         function Iterable(obj) {
@@ -1012,7 +1016,12 @@ const waterpipe = (function () {
                         throw new Error('Invalid pipe function');
                     }
                 } catch (e) {
-                    return console.warn(e.toString() + ' ' + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, pipe[startpos].start, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
+                    var cstart = pipe[startpos].start;
+                    if (warnedPos[cstart] || options.noWarning) {
+                        return;
+                    }
+                    warnedPos[cstart] = true;
+                    return console.warn(e.toString() + ' ' + formatCallSite(tokens.value, pipe.index, pipe.index + pipe.value.length, cstart, pipe[i - 1].end) + (e.stack || '').substr(e.toString().length));
                 }
             }
             return returnArray.length ? flatten(returnArray.concat(value)) : value;
@@ -1109,6 +1118,7 @@ const waterpipe = (function () {
         return {
             html: options.html !== false,
             noEncode: options.html === false || options.noEncode,
+            noWarning: options.noWarning,
             indent: evallable(options.indent) ? indent(options.indent, 1) : '',
             indentPadding: evallable(options.indentPadding) ? indent(options.indentPadding, 1) : execStack[0] ? indent(execStack[0].indent, execStack[0].level, execStack[0].indentPadding) : '',
             trimStart: options.trimStart,
@@ -1146,11 +1156,13 @@ const waterpipe = (function () {
         asdate: asdate,
         eval: apply,
         as: function (obj, varargs) {
-            return (varargs.globals[string(varargs.raw())] = obj);
+            var name = varargs.raw();
+            return (varargs.globals[string(isFunction(name) ? name() : name)] = obj);
         },
         let: function (obj, varargs) {
             while (varargs.hasArgs()) {
-                varargs.globals[string(varargs.raw())] = varargs.next();
+                var name = varargs.raw();
+                varargs.globals[string(isFunction(name) ? name() : name)] = varargs.next();
             }
         },
         more: function (a, b) {
@@ -1456,6 +1468,21 @@ const waterpipe = (function () {
             varargs.push(value);
             return varargs.reset();
         },
+        '{': function (obj, varargs) {
+            var globals = varargs.globals;
+            var prev = globals.new;
+            var o = {};
+            globals.new = o;
+            while (varargs.hasArgs()) {
+                var key = varargs.raw();
+                if (key === '}') {
+                    break;
+                }
+                o[string(isFunction(key) ? key() : key).replace(/:$/, '')] = varargs.next();
+            }
+            globals.new = prev;
+            return o;
+        },
         ':json': function (value) {
             return JSON.stringify(value);
         },
@@ -1474,7 +1501,7 @@ const waterpipe = (function () {
     ('|>eval ?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || |'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || | {'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
@@ -1734,6 +1761,7 @@ const waterpipe = (function () {
             return waterpipe;
         };
     }
+    waterpipe.version = VERSION;
     return waterpipe;
 })();
 
