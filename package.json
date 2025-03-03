@@ -15,7 +15,7 @@
   "scripts": {
     "test": "c8 --reporter=lcov --reporter=text-summary node_modules/mocha/bin/_mocha test/*.mjs",
     "build": "webpack",
-    "version": "npm run build && git add -A dist"
+    "version": "npm run build && git add ."
   },
   "repository": {
     "type": "git",

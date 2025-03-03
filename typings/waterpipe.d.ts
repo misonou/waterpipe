@@ -19,6 +19,11 @@ interface Waterpipe {
     string(value: any): string;
 
     /**
+     * Gets the library version.
+     */
+    readonly version: string;
+
+    /**
      * Defines global variables readable from all templates.
      */
     readonly globals: WaterpipeGlobal;

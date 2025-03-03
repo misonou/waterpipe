@@ -5,10 +5,14 @@ const TerserPlugin = require('terser-webpack-plugin');
 
 const packageJSON = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
+const entry = './src/waterpipe.js';
+const code = fs.readFileSync(entry, 'utf8').replace(/\d+\.\d+\.\d+/, packageJSON.version);
+fs.writeFileSync(entry, code, 'utf8');
+
 module.exports = {
     entry: {
-        'waterpipe': './src/waterpipe.js',
-        'waterpipe.min': './src/waterpipe.js',
+        'waterpipe': entry,
+        'waterpipe.min': entry,
     },
     mode: 'production',
     devtool: 'source-map',
