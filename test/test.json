@@ -103,24 +103,24 @@
                     "prop": "foobar",
                     "key": "prop"
                 },
-                "template": "{{$$key}}",
-                "expect": "foobar"
+                "template": "{{$$key}}:{{keys map [ $$@0 ] first [ . ]}}",
+                "expect": "foobar:foobar"
             },
             "should evaluate property name in first segment in parenthesis": {
                 "input": {
                     "prop": "foobar",
                     "key": "prop"
                 },
-                "template": "{{$$(key)}}",
-                "expect": "foobar"
+                "template": "{{$$(key)}}:{{keys map [ $$(@0) ] first [ . ]}}",
+                "expect": "foobar:foobar"
             },
             "should evaluate property name in first segment with single $ sign with parenthesis": {
                 "input": {
                     "prop": "foobar",
                     "key": "prop"
                 },
-                "template": "{{$(key)}}",
-                "expect": "foobar"
+                "template": "{{$(key)}}:{{keys map [ $(@0) ] first [ . ]}}",
+                "expect": "foobar:foobar"
             },
             "should return nothing on nonexistent path": {
                 "template": "{{arrOfFib.foobar}}",

@@ -251,7 +251,7 @@ const waterpipe = (function () {
                 t.evalMode = EVAL_RAND;
                 break;
             default:
-                if (/^@(\d+)$/.test(t[0])) {
+                if (isString(t[0]) && /^@(\d+)$/.test(t[0])) {
                     t.evalMode = EVAL_STACK;
                     t.stackIndex = +RegExp.$1;
                 }
