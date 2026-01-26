@@ -1,4 +1,4 @@
-/*! waterpipe v2.9.0 | (c) misonou | https://github.com/misonou/waterpipe#readme */
+/*! waterpipe v2.9.1 | (c) misonou | https://github.com/misonou/waterpipe#readme */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -15,7 +15,7 @@ var __webpack_exports__ = {};
 const waterpipe = (function () {
     'use strict';
 
-    var VERSION = '2.9.0';
+    var VERSION = '2.9.1';
 
     var OP_EVAL = 1;
     var OP_TEST = 2;
@@ -265,7 +265,7 @@ const waterpipe = (function () {
                 t.evalMode = EVAL_RAND;
                 break;
             default:
-                if (/^@(\d+)$/.test(t[0])) {
+                if (isString(t[0]) && /^@(\d+)$/.test(t[0])) {
                     t.evalMode = EVAL_STACK;
                     t.stackIndex = +RegExp.$1;
                 }

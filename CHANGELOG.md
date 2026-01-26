@@ -1,3 +1,10 @@
+## v2.9.1 / 2026-01-26
+
+- <kbd>fix</kbd> correctly expand the first segment of an object path when it is a nested path starting with a scope variable (`@0`, `@root`, ...).
+
+  > For example `$(@0).bar` and `$$@0.bar` should be expanded to `$foo.bar` if `@0` is evaulated to `foo`,
+    but it was erroneously treated as `@0.bar`.
+
 ## v2.9.0 / 2025-03-03
 
 - Add `noWarning` option to turn console warning off
