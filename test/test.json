@@ -582,6 +582,10 @@
             }
         },
         "Variable functions": {
+            "select": {
+                "template": "{{numbers select one}}:{{numbers select [ one ]}}:{{numbers.two select even}}",
+                "expect": "1:1:true"
+            },
             "let": {
                 "template": "{{let _tmp 1}}:{{_tmp}}",
                 "expect": ":1"

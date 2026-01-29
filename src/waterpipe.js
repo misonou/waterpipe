@@ -1151,6 +1151,9 @@ const waterpipe = (function () {
                 varargs.globals[string(isFunction(name) ? name() : name)] = varargs.next();
             }
         },
+        select: function (obj, varargs) {
+            return detectKeyFn(varargs, [obj])(obj);
+        },
         more: function (a, b) {
             return (compare(a, b, 1) > 0);
         },
@@ -1487,7 +1490,7 @@ const waterpipe = (function () {
     ('|>eval ?test !not +plus -minus *multiply /divide %mod ^pow ==equals !=notequals ~=iequals !~=inotequals ^=startswith $=endswith *=contains <less <=orless >more >=ormore ..to ?:choose &concat').replace(/(\W{1,3})(\S+)\s?/g, function (v, a, b) {
         pipes[a] = pipes[b];
     });
-    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace as let in !! && || | {'.split(' '), function (i, v) {
+    each('where first any all none sum map test not sortby isortby rsortby irsortby groupby replace select as let in !! && || | {'.split(' '), function (i, v) {
         pipes[v].varargs = true;
     });
 
