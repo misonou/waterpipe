@@ -98,6 +98,17 @@
                 "template": "{{obj.$(key)}}",
                 "expect": "foobar"
             },
+            "should evaluate property name in nested parenthesis": {
+                "input": {
+                    "obj": {
+                        "foo": "bar",
+                        "bar": "baz",
+                        "baz": "foobar"
+                    }
+                },
+                "template": "{{obj.$(obj.$(obj.foo))}}",
+                "expect": "foobar"
+            },
             "should evaluate property name in first segment": {
                 "input": {
                     "prop": "foobar",

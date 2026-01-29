@@ -209,13 +209,51 @@ const waterpipe = (function () {
     }
 
     function parseObjectPath(str) {
+        var m, r = /\)|\$\(?|[^.)$](?:[^.)]|\)(?![.)]|$))*/g;
         var t = [];
-        var m, r = /((?!^)\$)?([^$.()][^.]*)|\$\(([^)]+)\)/ig;
-        while ((m = r.exec(str)) !== null) {
-            t.push(m[1] || m[3] ? cached(parseObjectPath, m[3] || m[2]) : m[2][0] === '^' ? { fn: reverseIndex, arg: m[2].slice(1) } : m[2]);
+        var cur = {
+            list: t,
+            end: false,
+            parent: null
+        };
+
+        function pop() {
+            detectObjectPathMode(cur.list);
+            return !!(cur = cur.parent);
         }
+
+        while ((m = r.exec(str)) !== null) {
+            switch (m[0]) {
+                case '$':
+                    if (!m.index) {
+                        continue;
+                    }
+                case '$(':
+                    cur = {
+                        list: [],
+                        end: m[0] === '$',
+                        parent: cur
+                    };
+                    cur.parent.list.push(cur.list);
+                    continue;
+                case ')':
+                    cur.end = true;
+                    break;
+                default:
+                    cur.list.push(m[0][0] === '^' ? { fn: reverseIndex, arg: m[0].slice(1) } : m[0]);
+                    if (!cur.end) {
+                        continue;
+                    }
+            }
+            while (cur.end && pop());
+        }
+        while (pop());
+        return t;
+    }
+
+    function detectObjectPathMode(t) {
         if (!t.length) {
-            t[0] = str;
+            t[0] = '.';
         }
         switch (t[0]) {
             case '.':
@@ -256,7 +294,6 @@ const waterpipe = (function () {
                     t.stackIndex = +RegExp.$1;
                 }
         }
-        return t;
     }
 
     function escape(str, preserveEntity) {
