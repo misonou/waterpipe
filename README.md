@@ -1,6 +1,6 @@
 # Documentation
 
-See documentation on our [wiki](https://github.com/misonou/waterpipe/wiki).
+See documentation on our [wiki](https://misonou.pages.dev/waterpipe).
 
 # Installation
 
