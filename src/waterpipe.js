@@ -847,6 +847,20 @@ const waterpipe = (function () {
         return tokens;
     }
 
+    function Iterable(obj) {
+        this.values = obj;
+        if (obj && typeof obj.length === 'number' && obj.length >= 0) {
+            this.length = obj.length;
+        } else {
+            this.keys = obj && isObject(obj) ? Object.getOwnPropertyNames(obj) : [];
+            this.length = this.keys.length;
+        }
+    }
+
+    Iterable.prototype.get = function (index) {
+        return this.keys ? this.values[this.keys[index]] : this.values[index];
+    };
+
     function evaluate(tokens, options, outstr) {
         var output = [];
         var objStack = options.objStack || [];
@@ -854,13 +868,8 @@ const waterpipe = (function () {
         var warnedPos = {};
         var result;
 
-        function Iterable(obj) {
-            this.keys = keys(obj);
-            this.values = obj;
-        }
-
         function objAt(index) {
-            return objStack[index] instanceof Iterable ? objStack[index].values[objStack[index].keys[iteratorStack[index]]] : objStack[index];
+            return objStack[index] instanceof Iterable ? objStack[index].get(iteratorStack[index]) : objStack[index];
         }
 
         function evaluateObjectPathPart(p, value) {
@@ -882,11 +891,11 @@ const waterpipe = (function () {
             var valid = evaluateObjectPath.valid = acceptShorthand || !objectPath.evalMode || (objectPath[0].length > 1 && objectPath[0] !== '##');
             switch (objectPath.evalMode) {
                 case EVAL_ITER_KEY:
-                    return objStack[0] instanceof Iterable ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
+                    return objStack[0] instanceof Iterable && objStack[0].keys ? objStack[0].keys[iteratorStack[0]] : iteratorStack[0];
                 case EVAL_ITER_INDEX:
                     return iteratorStack[0];
                 case EVAL_ITER_COUNT:
-                    return objStack[0] instanceof Iterable ? objStack[0].keys.length : 0;
+                    return objStack[0] instanceof Iterable ? objStack[0].length : 0;
                 case EVAL_STACK:
                     value = objAt(objectPath.stackIndex < 0 ? objectPath.stackIndex + objStack.length : objectPath.stackIndex || 0);
                     break;
@@ -1078,12 +1087,12 @@ const waterpipe = (function () {
                     case OP_ITER:
                         objStack.unshift(new Iterable(evaluatePipe(t.expression)));
                         iteratorStack.unshift(0);
-                        if (!objStack[0].keys.length) {
+                        if (!objStack[0].length) {
                             i = t.index;
                         }
                         break;
                     case OP_ITER_END:
-                        if (++iteratorStack[0] >= objStack[0].keys.length) {
+                        if (++iteratorStack[0] >= objStack[0].length) {
                             objStack.shift();
                             iteratorStack.shift();
                         } else {
