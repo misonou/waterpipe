@@ -43,6 +43,9 @@ const waterpipe = (function () {
     var collator = typeof Intl !== 'undefined' && Intl.Collator && new Intl.Collator(undefined, { caseFirst: 'upper' });
     var pipes = Object.create ? Object.create(null) : {};
     var internals = {};
+    var vutil = {
+        each: each
+    };
 
     var compares = [
         function (a, b) { return compare(a, b, 1); },
@@ -135,7 +138,7 @@ const waterpipe = (function () {
 
     function detectKeyFn(varargs, arr, defaultFn) {
         function isValidKey(key) {
-            return first(arr, function (v) {
+            return first(vutil, arr, function (v) {
                 return hasProperty(v, key);
             }, true);
         }
@@ -388,27 +391,27 @@ const waterpipe = (function () {
         return args[0];
     }
 
-    function where(arr, filter, map) {
+    function where(varargs, arr, filter, map) {
         if (!evallable(arr)) {
             return arr;
         }
         var result = Array.isArray(arr) ? [] : {};
-        each(arr, function (i, v) {
+        varargs.each(arr, function (i, v) {
             if (filter(v, i)) {
                 result[arr.push ? result.length : i] = (map || pass)(v, i);
             }
-        });
+        }, map || filter);
         return result;
     }
 
-    function first(arr, fn, returnValue, negate) {
+    function first(varargs, arr, fn, returnValue, negate) {
         var result;
-        each(arr, function (i, v) {
+        varargs.each(arr, function (i, v) {
             if (negate ^ !!fn(v, i)) {
                 result = returnValue || v;
                 return false;
             }
-        });
+        }, fn);
         return result;
     }
 
@@ -460,9 +463,9 @@ const waterpipe = (function () {
             return arr;
         }
         var tmp = [];
-        each(arr, function (i, v) {
+        varargs.each(arr, function (i, v) {
             tmp.push([i, v, fn(v, i)]);
-        });
+        }, fn);
         tmp.sort(function (a, b) {
             return compare(a[2], b[2]);
         });
@@ -872,6 +875,17 @@ const waterpipe = (function () {
             return objStack[index] instanceof Iterable ? objStack[index].get(iteratorStack[index]) : objStack[index];
         }
 
+        function evaluateInScope(obj, index, run) {
+            try {
+                objStack.unshift(obj);
+                iteratorStack.unshift(index);
+                return run();
+            } finally {
+                objStack.shift();
+                iteratorStack.shift();
+            }
+        }
+
         function evaluateObjectPathPart(p, value) {
             if (Array.isArray(p)) {
                 return string(evaluateObjectPath(p));
@@ -994,21 +1008,30 @@ const waterpipe = (function () {
                     var start = i;
                     var len = i <= end && pipe[i].length();
                     if (len) {
+                        var run = function () {
+                            return evaluatePipe(pipe, start + 1, start + len - 1);
+                        };
                         i += len + 1;
-                        return function (obj, index) {
-                            try {
-                                objStack.unshift(arguments.length ? obj : value);
-                                iteratorStack.unshift(index);
-                                return evaluatePipe(pipe, start + 1, start + len - 1);
-                            } finally {
-                                objStack.shift();
-                                iteratorStack.shift();
-                            }
+                        return function fn(obj, index) {
+                            return objStack[0] instanceof Iterable && objStack[0].fn === fn ? run() : evaluateInScope(arguments.length ? obj : value, index, run);
                         };
                     }
                     if (isFunction(wrapFn)) {
                         return wrapFn(varargs.next());
                     }
+                },
+                each: function (obj, callback, fn) {
+                    var iterable = new Iterable(obj);
+                    iterable.fn = fn;
+                    evaluateInScope(iterable, 0, function () {
+                        for (var i, j = 0, len = iterable.length; j < len; j++) {
+                            iteratorStack[0] = j;
+                            i = iterable.keys ? iterable.keys[j] : j;
+                            if (callback(i, iterable.get(j)) === false) {
+                                break;
+                            }
+                        }
+                    });
                 }
             };
 
@@ -1319,7 +1342,7 @@ const waterpipe = (function () {
             return str.substr(needle.length + (str.lastIndexOf(needle) + 1 || -needle.length + 1) - 1);
         }),
         split: function (str, separator) {
-            return where(string(str).split(separator), pass);
+            return where(vutil, string(str).split(separator), pass);
         },
         repeat: function (count, str) {
             return repeat(str, count);
@@ -1422,29 +1445,29 @@ const waterpipe = (function () {
             return result;
         },
         first: function (arr, varargs) {
-            return first(arr, detectKeyFn(varargs, arr));
+            return first(varargs, arr, detectKeyFn(varargs, arr));
         },
         any: function (arr, varargs) {
-            return !!first(arr, detectKeyFn(varargs, arr), true);
+            return !!first(varargs, arr, detectKeyFn(varargs, arr), true);
         },
         all: function (arr, varargs) {
-            return !first(arr, detectKeyFn(varargs, arr), true, true);
+            return !first(varargs, arr, detectKeyFn(varargs, arr), true, true);
         },
         none: function (arr, varargs) {
-            return !first(arr, detectKeyFn(varargs, arr), true);
+            return !first(varargs, arr, detectKeyFn(varargs, arr), true);
         },
         where: function (arr, varargs) {
-            return where(arr, detectKeyFn(varargs, arr));
+            return where(varargs, arr, detectKeyFn(varargs, arr));
         },
         map: function (arr, varargs) {
-            return where(arr, constFn(true), detectKeyFn(varargs, arr));
+            return where(varargs, arr, constFn(true), detectKeyFn(varargs, arr));
         },
         sum: function (arr, varargs) {
             var result;
             var fn = varargs.fn() || ((result = varargs.next()), detectKeyFn(varargs, arr, pass));
-            each(arr, function (i, v) {
+            varargs.each(arr, function (i, v) {
                 result = result !== undefined ? result + fn(v, i) : fn(v, i);
-            });
+            }, fn);
             return result;
         },
         sortby: function (arr, varargs) {
@@ -1462,13 +1485,13 @@ const waterpipe = (function () {
         groupby: function (arr, varargs) {
             var result = {};
             var fn = detectKeyFn(varargs, arr);
-            each(arr, function (i, v) {
+            varargs.each(arr, function (i, v) {
                 var key = string(fn(v, i));
                 if (!result.hasOwnProperty(key)) {
                     result[key] = arr.push ? [] : {};
                 }
                 result[key][arr.push ? result[key].length : i] = v;
-            });
+            }, fn);
             return result;
         },
         addtime: function (obj, span) {

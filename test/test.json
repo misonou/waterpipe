@@ -407,6 +407,14 @@
                 "template": "{{foreach}}{{#}}{{/foreach}}",
                 "expect": "p1p2"
             },
+            "# should return current key of nested pipe iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{map [ # ]}}",
+                "expect": "{&quot;p1&quot;:&quot;p1&quot;,&quot;p2&quot;:&quot;p2&quot;}"
+            },
             "#key should return current key of iteration": {
                 "input": {
                     "p1": 1,
@@ -414,6 +422,14 @@
                 },
                 "template": "{{foreach}}{{#key}}{{/foreach}}",
                 "expect": "p1p2"
+            },
+            "#key should return current key of nested pipe iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{map [ #key ]}}",
+                "expect": "{&quot;p1&quot;:&quot;p1&quot;,&quot;p2&quot;:&quot;p2&quot;}"
             },
             "#key should return undefined in context other than iteration": {
                 "template": "{{#key}}",
@@ -427,6 +443,14 @@
                 "template": "{{foreach}}{{##}}{{/foreach}}",
                 "expect": "01"
             },
+            "## should return current index of nested pipe iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{map [ ## ]}}",
+                "expect": "{&quot;p1&quot;:0,&quot;p2&quot;:1}"
+            },
             "#index should return current index of iteration": {
                 "input": {
                     "p1": 1,
@@ -434,6 +458,14 @@
                 },
                 "template": "{{foreach}}{{#index}}{{/foreach}}",
                 "expect": "01"
+            },
+            "#index should return current index of nested pipe iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{map [ #index ]}}",
+                "expect": "{&quot;p1&quot;:0,&quot;p2&quot;:1}"
             },
             "#index should return undefined in context other than iteration": {
                 "template": "{{#index}}",
@@ -446,6 +478,14 @@
                 },
                 "template": "{{foreach}}{{#count}}{{/foreach}}",
                 "expect": "22"
+            },
+            "#count should return count of nested pipe iteration": {
+                "input": {
+                    "p1": 1,
+                    "p2": 2
+                },
+                "template": "{{map [ #count ]}}",
+                "expect": "{&quot;p1&quot;:2,&quot;p2&quot;:2}"
             },
             "#count should return 0 in context other than iteration": {
                 "template": "{{#count}}",

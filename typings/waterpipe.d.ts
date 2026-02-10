@@ -183,5 +183,13 @@ declare namespace Waterpipe {
          * @returns A function which when called, the lambda expression will be evaluated against the input arguments and the result is returned.
          */
         fn(fallback?: (value: any) => any): ((value: any, index: any) => any) | null;
+
+        /**
+         * Iterates over the given value (array or object) and calls the callback for each item.
+         * @param value Value to iterate over.
+         * @param callback Callback function called for each item. Iteration will be stopped if the callback returns `false`.
+         * @param iterFn Function from {@link PipeEvaluator.fn} for which when invoked in each iteration the input value and special variable `#`, `#index` and `#count` are correctly set.
+         */
+        each(value: any, callback: (index: any, value: any) => any, iterFn: () => any): void;
     }
 }
