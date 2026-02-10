@@ -133,7 +133,7 @@ const waterpipe = (function () {
         };
     }
 
-    function detectKeyFn(varargs, arr) {
+    function detectKeyFn(varargs, arr, defaultFn) {
         function isValidKey(key) {
             return first(arr, function (v) {
                 return hasProperty(v, key);
@@ -155,6 +155,10 @@ const waterpipe = (function () {
                     };
                 }
                 return cached(keyFn, key);
+            case 'end':
+                if (defaultFn) {
+                    return defaultFn;
+                }
         }
         return cached(keyFn, string(varargs.next()));
     }
@@ -1428,7 +1432,7 @@ const waterpipe = (function () {
         },
         sum: function (arr, varargs) {
             var result;
-            var fn = varargs.fn() || ((result = varargs.next()), varargs.fn() || (varargs.hasArgs() ? detectKeyFn(varargs, arr) : pass));
+            var fn = varargs.fn() || ((result = varargs.next()), detectKeyFn(varargs, arr, pass));
             each(arr, function (i, v) {
                 result = result !== undefined ? result + fn(v, i) : fn(v, i);
             });
