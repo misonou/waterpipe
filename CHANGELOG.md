@@ -1,3 +1,9 @@
+## v2.10.0 / 2026-02-27
+
+- Support iteration special variable in pipe functions e.g. `#index`, `#count` in pipe function like `where`
+- Support nested parenthesized data path e.g. `$(obj.$(foo.bar))`
+- Add `select` pipe function
+
 ## v2.9.1 / 2026-01-26
 
 - <kbd>fix</kbd> correctly expand the first segment of an object path when it is a nested path starting with a scope variable (`@0`, `@root`, ...).
